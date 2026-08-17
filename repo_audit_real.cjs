@@ -3,9 +3,9 @@
 const fs=require('fs');const path=require('path');const crypto=require('crypto');const {execFileSync}=require('child_process')
 const ROOT='C:\\Users\\Deglu\\.hermes';const OUT=path.join(ROOT,'reports','repository_audit');const MATRIX=path.join(ROOT,'tools','swarm_goals','all_projects_audit_matrix.json')
 const IGNORE=new Set(['node_modules','.cache','.venv','venv','dist','build','__pycache__','.agents','.codex','logs','tmp'])
-function git(repo,args,fallback=''){try{return execFileSync('git',['-C',repo,...args],{encoding:'utf8',timeout:20000,maxBuffer:30*1024*1024}).trim()}catch(_){return fallback}}
+function git(repo,args,fallback=''){try{return execFileSync('git',['-C',repo,...args],{encoding:'utf8',timeout:20000,maxBuffer:30*1024*1024,stdio:['ignore','pipe','ignore']}).trim()}catch(_){return fallback}}
 function discover(root,maxDepth=5){const found=new Set();function walk(dir,depth){if(depth>maxDepth)return;let es;try{es=fs.readdirSync(dir,{withFileTypes:true})}catch(_){return}
-  if(es.some(e=>e.name==='.git')){found.add(path.resolve(dir));return}for(const e of es){if(!e.isDirectory()||IGNORE.has(e.name)||e.name.startsWith('$'))continue;walk(path.join(dir,e.name),depth+1)}}walk(root,0);return[...found].sort()}
+  if(es.some(e=>e.name==='.git')&&git(dir,['rev-parse','--is-inside-work-tree'])==='true'){found.add(path.resolve(dir));return}for(const e of es){if(!e.isDirectory()||IGNORE.has(e.name)||e.name.startsWith('$'))continue;walk(path.join(dir,e.name),depth+1)}}walk(root,0);return[...found].sort()}
 function binary(buf){return buf.subarray(0,Math.min(buf.length,8000)).includes(0)}
 function lang(ext){return({'.js':'JavaScript','.cjs':'JavaScript','.mjs':'JavaScript','.ts':'TypeScript','.tsx':'TypeScript','.py':'Python','.rs':'Rust','.go':'Go','.java':'Java','.cs':'C#','.php':'PHP','.rb':'Ruby','.html':'HTML','.css':'CSS','.scss':'SCSS','.sql':'SQL','.md':'Markdown','.json':'JSON'})[ext]||'Other'}
 function analyze(repo){const files=git(repo,['ls-files','-z']).split('\0').filter(Boolean);let loc=0,analyzed=0,todo=0,mocks=0,tests=0;const langs={},largest=[]

@@ -58,16 +58,23 @@
 
 const fs = require('fs')
 const path = require('path')
-const { execSync } = require('child_process')
+const { execSync, spawnSync } = require('child_process')
 const readline = require('readline')
 
 const HERMES_ROOT = path.resolve('C:\\Users\\Deglu\\.hermes')
 const HERMES_EXE = path.join(HERMES_ROOT, 'hermes-agent', 'venv', 'Scripts', 'hermes.exe')
-const PYTHON_EXE = path.join(HERMES_ROOT, 'hermes-agent', 'venv', 'Scripts', 'python.exe')
+const PYTHON_EXE = [
+  path.join('C:\\Users\\Deglu\\.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'python', 'python.exe'),
+  path.join(HERMES_ROOT, 'hermes-agent', 'venv', 'Scripts', 'python.exe')
+].find(candidate => fs.existsSync(candidate))
 const PI_DIR = path.join(HERMES_ROOT, 'tools', 'pi')
 const BIBLIOTECARIO_DIR = path.join(HERMES_ROOT, 'tools', 'agent-bibliotecario')
 const KIMI_DIR = path.join(HERMES_ROOT, 'tools', 'kimi-k3-in-c')
 const DATA_BRIDGE_SCRIPT = path.join(HERMES_ROOT, 'tools', 'tuios', 'hermes_data_bridge.py')
+const B2B_PROJECT = path.join(HERMES_ROOT, 'mechaHD', 'LDG_INNOVATION')
+const B2B_PIPELINE = path.join(B2B_PROJECT, 'scripts', 'run_b2b_pipeline.cjs')
+const B2B_INTAKE = path.join(B2B_PROJECT, 'scripts', 'b2b_intake.cjs')
+const B2B_STATE = path.join(HERMES_ROOT, 'reports', 'tuios', 'b2b_pipeline_state.json')
 
 const COLORS = {
   reset: '\x1b[0m',
@@ -1444,7 +1451,7 @@ async function handleChoice(choice) {
       const executor = path.join(HERMES_ROOT, 'hermes_swarm_executor.js')
       if (fs.existsSync(executor)) {
         try {
-          execSync(`node "${executor}"`, { stdio: 'inherit', cwd: HERMES_ROOT })
+          execSync(`node "${executor}" --health`, { stdio: 'inherit', cwd: HERMES_ROOT })
         } catch (e) {
           console.error(`${COLORS.red}Errore esecuzione swarm: ${e.message}${COLORS.reset}`)
         }
@@ -1510,22 +1517,21 @@ async function handleChoice(choice) {
     }
     case '5': {
       const libScript = path.join(BIBLIOTECARIO_DIR, 'librarian_server.py')
-      execSync(`python "${libScript}" --stats`, { stdio: 'inherit' })
+      if (!PYTHON_EXE || !fs.existsSync(PYTHON_EXE)) {
+        console.error(`${COLORS.red}Python runtime non disponibile: ${PYTHON_EXE}${COLORS.reset}`)
+      } else {
+        try { execSync(`"${PYTHON_EXE}" "${libScript}" --stats`, { stdio: 'inherit' }) }
+        catch (e) { console.error(`${COLORS.red}Statistiche non disponibili (exit ${e.status || 1}).${COLORS.reset}`) }
+      }
       await waitForEnter()
       showMenu()
       break
     }
     case '6': {
       console.log(`${COLORS.yellow}=== Hermes Local Runtime & Port Monitor ===${COLORS.reset}`)
-      const ports = [
-        { name: 'Hydra Router Core', port: 3033, desc: 'Multi-Model Matrix Auto-Routing' },
-        { name: 'Hermes IDE Unchained', port: 5195, desc: 'Theia Web IDE & Coding Harness' },
-        { name: 'Paperclip Swarm Hub', port: 3100, desc: 'Agent Organization & Issues API' },
-        { name: 'Founder OS Legacy', port: 19080, desc: 'Founder Operations Base' },
-        { name: 'Viral Hub Frontend', port: 19081, desc: 'Viral Growth Engine' },
-        { name: 'Block Buzz Monitor', port: 5198, desc: 'Telemetry & Eval State' }
-      ]
-      console.table(ports)
+      const health = path.join(HERMES_ROOT, 'tools', 'tuios', 'swarm_health_check.cjs')
+      try { execSync(`node "${health}"`, { stdio: 'inherit', cwd: HERMES_ROOT }) }
+      catch (_) { console.error(`${COLORS.red}Uno o più servizi non sono attivi.${COLORS.reset}`) }
       await waitForEnter()
       showMenu()
       break
@@ -1577,7 +1583,33 @@ function waitForEnter() {
 const args = process.argv.slice(2)
 if (args.length > 0) {
   const command = args[0].toLowerCase()
-  if (command === '--create-job' || command === '--new-job' || command === 'new-job' || command === '-n') {
+  if (command === '--help' || command === '-h' || command === 'help') {
+    console.log(`TUIOS commands:\n  --swarm, --swarm-health   Verify live process + recent heartbeat evidence\n  --ports                   Probe actual TCP ports\n  --repo-audit              Generate a deterministic Git repository report\n  --b2b-intake <file>       Normalize CSV, JSON or SQLite contacts without trusting imported fields\n  --b2b-run [options]       Run intake/crawl/preflight/generation/visual QA\n  --b2b-status              Show the last observed B2B pipeline state\n  --audit, --traceability   Show traceability data\n  --stats                   Show librarian statistics using the configured runtime\n  --pi                      Launch Pi interactively`)
+    process.exit(0)
+  } else if (command === '--repo-audit' || command === 'repo-audit') {
+    const auditScript = path.join(HERMES_ROOT, 'tools', 'tuios', 'repo_audit_real.cjs')
+    try { execSync(`node "${auditScript}"`, { stdio: 'inherit', cwd: HERMES_ROOT }); process.exit(0) }
+    catch (e) { process.exit(e.status || 1) }
+  } else if (command === '--swarm-health' || command === '--swarm' || command === 'swarm' || command === '-1') {
+    const executor = path.join(HERMES_ROOT, 'hermes_swarm_executor.js')
+    try { execSync(`node "${executor}" --health`, { stdio: 'inherit', cwd: HERMES_ROOT }); process.exit(0) }
+    catch (e) { process.exit(e.status || 2) }
+  } else if (command === '--ports' || command === 'ports' || command === '-6') {
+    const health = path.join(HERMES_ROOT, 'tools', 'tuios', 'swarm_health_check.cjs')
+    try { execSync(`node "${health}"`, { stdio: 'inherit', cwd: HERMES_ROOT }); process.exit(0) }
+    catch (e) { process.exit(e.status || 2) }
+  } else if (command === '--b2b-intake' || command === 'b2b-intake') {
+    if (!args[1]) { console.error('Usage: --b2b-intake <contacts.csv|json|sqlite> [--table name]'); process.exit(1) }
+    const inputPath = path.resolve(process.cwd(), args[1])
+    const result = spawnSync(process.execPath, [B2B_INTAKE, '--input', inputPath, ...args.slice(2)], { cwd: B2B_PROJECT, stdio: 'inherit' })
+    process.exit(result.status === null ? 1 : result.status)
+  } else if (command === '--b2b-run' || command === 'b2b-run') {
+    const result = spawnSync(process.execPath, [B2B_PIPELINE, ...args.slice(1)], { cwd: process.cwd(), stdio: 'inherit' })
+    process.exit(result.status === null ? 1 : result.status)
+  } else if (command === '--b2b-status' || command === 'b2b-status') {
+    if (!fs.existsSync(B2B_STATE)) { console.error('No B2B pipeline state has been recorded yet.'); process.exit(2) }
+    console.log(fs.readFileSync(B2B_STATE, 'utf8')); process.exit(0)
+  } else if (command === '--create-job' || command === '--new-job' || command === 'new-job' || command === '-n') {
     handleChoice('N')
   } else if (command === '--jobs' || command === '--list-jobs' || command === '--pipeline' || command === 'pipeline' || command === '-b') {
     handleChoice('B')
@@ -1620,16 +1652,12 @@ if (args.length > 0) {
     handleChoice('W')
   } else if (command === '--agents' || command === 'agents' || command === '-e') {
     handleChoice('E')
-  } else if (command === '--traceability' || command === 'traceability' || command === '-t') {
+  } else if (command === '--traceability' || command === '--audit' || command === 'traceability' || command === '-t') {
     handleChoice('T')
-  } else if (command === '--swarm' || command === 'swarm' || command === '-1') {
-    handleChoice('1')
   } else if (command === '--pi' || command === 'pi' || command === '-2') {
     handleChoice('2')
   } else if (command === '--stats' || command === 'stats' || command === '-5') {
     handleChoice('5')
-  } else if (command === '--ports' || command === 'ports' || command === '-6') {
-    handleChoice('6')
   } else {
     console.log(`Unknown command: ${command}. Launching interactive TUIOS...`)
     showMenu()
