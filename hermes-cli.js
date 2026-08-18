@@ -58,7 +58,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const { execSync, spawnSync } = require('child_process')
+const { execSync, spawnSync, spawn } = require('child_process')
 const readline = require('readline')
 
 const HERMES_ROOT = path.resolve('C:\\Users\\Deglu\\.hermes')
@@ -75,6 +75,19 @@ const B2B_PROJECT = path.join(HERMES_ROOT, 'mechaHD', 'LDG_INNOVATION')
 const B2B_PIPELINE = path.join(B2B_PROJECT, 'scripts', 'run_b2b_pipeline.cjs')
 const B2B_INTAKE = path.join(B2B_PROJECT, 'scripts', 'b2b_intake.cjs')
 const B2B_STATE = path.join(HERMES_ROOT, 'reports', 'tuios', 'b2b_pipeline_state.json')
+const HERMES_RUNTIME_ROOT = path.join(HERMES_ROOT, 'hermes-agent-runtime')
+const HERMES_RUNTIME_PYTHON = path.join(HERMES_ROOT, 'hermes-agent', 'venv', 'Scripts', 'python.exe')
+const PUGLIA_DB_PIPELINE = path.join(B2B_PROJECT, 'scripts', 'run_puglia_business_db_pipeline.py')
+const PUGLIA_DB_VALIDATOR = path.join(B2B_PROJECT, 'scripts', 'validate_puglia_business_db.py')
+const PUGLIA_DB_HEALTH = path.join(HERMES_ROOT, 'reports', 'tuios', 'puglia_business_db_health_latest.json')
+const B2B_WORKER_SWARM = path.join(B2B_PROJECT, 'scripts', 'b2b_worker_swarm.py')
+const B2B_WORKER_HEARTBEAT = path.join(HERMES_ROOT, 'reports', 'tuios', 'b2b_worker_swarm_heartbeat.json')
+const B2B_WORKER_STOP = path.join(HERMES_ROOT, 'reports', 'tuios', 'b2b_worker_swarm.stop')
+
+function pidAlive(pid) {
+  if (!Number.isInteger(Number(pid)) || Number(pid) <= 0) return false
+  try { process.kill(Number(pid), 0); return true } catch (_) { return false }
+}
 
 const COLORS = {
   reset: '\x1b[0m',
@@ -1584,7 +1597,7 @@ const args = process.argv.slice(2)
 if (args.length > 0) {
   const command = args[0].toLowerCase()
   if (command === '--help' || command === '-h' || command === 'help') {
-    console.log(`TUIOS commands:\n  --swarm, --swarm-health   Verify live process + recent heartbeat evidence\n  --ports                   Probe actual TCP ports\n  --repo-audit              Generate a deterministic Git repository report\n  --b2b-intake <file>       Normalize CSV, JSON or SQLite contacts without trusting imported fields\n  --b2b-run [options]       Run intake/crawl/preflight/generation/visual QA\n  --b2b-status              Show the last observed B2B pipeline state\n  --audit, --traceability   Show traceability data\n  --stats                   Show librarian statistics using the configured runtime\n  --pi                      Launch Pi interactively`)
+    console.log(`TUIOS commands:\n  --swarm, --swarm-health   Verify live process + recent heartbeat evidence\n  --b2b-worker-start [N]    Start N local zero-API-cost contact workers\n  --b2b-worker-stop         Request a clean worker-pool shutdown\n  --b2b-worker-status       Print worker PID, heartbeat and queue evidence\n  --hermes-runtime-status   Run the clean Hermes CLI status command\n  --puglia-db-refresh       Rebuild, enrich and validate the 1,500-organization DB\n  --puglia-db-status        Re-run and print the Puglia database quality gate\n  --ports                   Probe actual TCP ports\n  --repo-audit              Generate a deterministic Git repository report\n  --b2b-intake <file>       Normalize CSV, JSON or SQLite contacts without trusting imported fields\n  --b2b-run [options]       Run intake/crawl/preflight/generation/visual QA\n  --b2b-status              Show the last observed B2B pipeline state\n  --audit, --traceability   Show traceability data\n  --stats                   Show librarian statistics using the configured runtime\n  --pi                      Launch Pi interactively`)
     process.exit(0)
   } else if (command === '--repo-audit' || command === 'repo-audit') {
     const auditScript = path.join(HERMES_ROOT, 'tools', 'tuios', 'repo_audit_real.cjs')
@@ -1594,6 +1607,41 @@ if (args.length > 0) {
     const executor = path.join(HERMES_ROOT, 'hermes_swarm_executor.js')
     try { execSync(`node "${executor}" --health`, { stdio: 'inherit', cwd: HERMES_ROOT }); process.exit(0) }
     catch (e) { process.exit(e.status || 2) }
+  } else if (command === '--hermes-runtime-status' || command === 'hermes-runtime-status') {
+    if (!fs.existsSync(HERMES_RUNTIME_ROOT) || !fs.existsSync(HERMES_RUNTIME_PYTHON)) {
+      console.error('Clean Hermes runtime or Python environment is missing.'); process.exit(2)
+    }
+    const result = spawnSync(HERMES_RUNTIME_PYTHON, ['-m', 'hermes_cli.main', 'status'], { cwd: HERMES_RUNTIME_ROOT, stdio: 'inherit' })
+    process.exit(result.status === null ? 1 : result.status)
+  } else if (command === '--b2b-worker-start' || command === 'b2b-worker-start') {
+    let prior = null
+    try { prior = JSON.parse(fs.readFileSync(B2B_WORKER_HEARTBEAT, 'utf8')) } catch (_) {}
+    if (prior?.status === 'running' && pidAlive(prior.coordinator_pid)) {
+      console.log(JSON.stringify({ status: 'already_running', coordinator_pid: prior.coordinator_pid }, null, 2)); process.exit(0)
+    }
+    if (fs.existsSync(B2B_WORKER_STOP)) fs.unlinkSync(B2B_WORKER_STOP)
+    const workers = String(Math.max(1, Math.min(16, Number.parseInt(args[1] || '4', 10) || 4)))
+    const child = spawn(PYTHON_EXE, [B2B_WORKER_SWARM, '--workers', workers], {
+      cwd: B2B_PROJECT, detached: true, windowsHide: true, stdio: 'ignore'
+    })
+    child.unref()
+    console.log(JSON.stringify({ status: 'starting', coordinator_pid: child.pid, workers: Number(workers) }, null, 2)); process.exit(0)
+  } else if (command === '--b2b-worker-stop' || command === 'b2b-worker-stop') {
+    fs.mkdirSync(path.dirname(B2B_WORKER_STOP), { recursive: true })
+    fs.writeFileSync(B2B_WORKER_STOP, new Date().toISOString() + '\n')
+    console.log(JSON.stringify({ status: 'stop_requested', stop_file: B2B_WORKER_STOP }, null, 2)); process.exit(0)
+  } else if (command === '--b2b-worker-status' || command === 'b2b-worker-status') {
+    if (!fs.existsSync(B2B_WORKER_HEARTBEAT)) { console.error('No B2B worker heartbeat has been recorded.'); process.exit(2) }
+    const heartbeat = JSON.parse(fs.readFileSync(B2B_WORKER_HEARTBEAT, 'utf8'))
+    heartbeat.coordinator_process_alive = pidAlive(heartbeat.coordinator_pid)
+    console.log(JSON.stringify(heartbeat, null, 2)); process.exit(heartbeat.status === 'running' && heartbeat.coordinator_process_alive ? 0 : 2)
+  } else if (command === '--puglia-db-refresh' || command === 'puglia-db-refresh') {
+    const refreshArgs = [PUGLIA_DB_PIPELINE, ...args.slice(1)]
+    const result = spawnSync(PYTHON_EXE, refreshArgs, { cwd: B2B_PROJECT, stdio: 'inherit' })
+    process.exit(result.status === null ? 1 : result.status)
+  } else if (command === '--puglia-db-status' || command === 'puglia-db-status') {
+    const result = spawnSync(PYTHON_EXE, [PUGLIA_DB_VALIDATOR, '--output', PUGLIA_DB_HEALTH], { cwd: B2B_PROJECT, stdio: 'inherit' })
+    process.exit(result.status === null ? 1 : result.status)
   } else if (command === '--ports' || command === 'ports' || command === '-6') {
     const health = path.join(HERMES_ROOT, 'tools', 'tuios', 'swarm_health_check.cjs')
     try { execSync(`node "${health}"`, { stdio: 'inherit', cwd: HERMES_ROOT }); process.exit(0) }

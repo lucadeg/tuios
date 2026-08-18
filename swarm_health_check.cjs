@@ -1,22 +1,28 @@
 #!/usr/bin/env node
 'use strict'
 const fs = require('fs'); const path = require('path'); const net = require('net'); const { execFileSync } = require('child_process')
-const ROOT = 'C:\\Users\\Deglu\\.hermes'; const BUZZ = path.join(ROOT, 'tools', 'buzz', 'buzz_state.json'); const B2B_STATE = path.join(ROOT, 'reports', 'tuios', 'b2b_pipeline_state.json'); const MAX_AGE_MS = 5*60*1000
+const ROOT = 'C:\\Users\\Deglu\\.hermes'; const BUZZ = path.join(ROOT, 'tools', 'buzz', 'buzz_state.json'); const B2B_STATE = path.join(ROOT, 'reports', 'tuios', 'b2b_pipeline_state.json'); const B2B_WORKER_HEARTBEAT = path.join(ROOT, 'reports', 'tuios', 'b2b_worker_swarm_heartbeat.json'); const MAX_AGE_MS = 5*60*1000
 function probe(port) { return new Promise(resolve => { const socket=net.createConnection({host:'127.0.0.1',port});
   const done=status=>{socket.destroy();resolve({port,status})}; socket.setTimeout(800); socket.on('connect',()=>done('listening'));
   socket.on('timeout',()=>done('closed')); socket.on('error',()=>done('closed')) }) }
 function processEvidence(pattern) { try { const out=execFileSync('powershell',['-NoProfile','-Command',
   `$ErrorActionPreference='SilentlyContinue'; Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match '${pattern}' } | Select-Object ProcessId,Name,CommandLine | ConvertTo-Json -Compress`],
   {encoding:'utf8',timeout:5000}); const p=out.trim()?JSON.parse(out):[]; return Array.isArray(p)?p:[p] } catch(_){return []} }
+function pidAlive(pid){if(!Number.isInteger(Number(pid))||Number(pid)<=0)return false;try{process.kill(Number(pid),0);return true}catch(_){return false}}
 async function main(){ const defs=[['Hydra Router Core',3033],['Hermes IDE',5195],['Paperclip Swarm Hub',3100],['Founder OS',19080],['Viral Hub',19081],['Buzz Monitor',5198]]
   const ports=await Promise.all(defs.map(async([name,port])=>({name,...await probe(port)}))); let state=null,stateError=null
   try{state=JSON.parse(fs.readFileSync(BUZZ,'utf8'))}catch(e){stateError=e.message} const timestamp=state?.last_updated||state?.updated_at||null
   const ageMs=timestamp?Date.now()-Date.parse(timestamp):null; const fresh=Number.isFinite(ageMs)&&ageMs>=0&&ageMs<=MAX_AGE_MS
   const processes=processEvidence('hermes_swarm_executor|project_swarm_audit_daemon|multi_jobs_daemon').filter(p=>!String(p.CommandLine||'').includes('Get-CimInstance'))
   const heartbeats=(state?.telemetry_events||[]).filter(e=>{const t=Date.parse(e.timestamp);return Number.isFinite(t)&&Date.now()-t<=MAX_AGE_MS&&e.event_type==='heartbeat'})
-  const running=processes.length>0&&heartbeats.length>0; let b2b=null;try{b2b=JSON.parse(fs.readFileSync(B2B_STATE,'utf8'))}catch(_){}
+  let workerHeartbeat=null;try{workerHeartbeat=JSON.parse(fs.readFileSync(B2B_WORKER_HEARTBEAT,'utf8'))}catch(_){}
+  const workerAgeMs=workerHeartbeat?.last_heartbeat?Date.now()-Date.parse(workerHeartbeat.last_heartbeat):null
+  const workerFresh=workerHeartbeat?.status==='running'&&Number.isFinite(workerAgeMs)&&workerAgeMs>=0&&workerAgeMs<=MAX_AGE_MS
+  const workerPids=new Set([workerHeartbeat?.coordinator_pid,...(workerHeartbeat?.worker_pids||[])].map(Number).filter(Number.isFinite))
+  const aliveWorkerPids=[...workerPids].filter(pidAlive)
+  const running=(workerFresh&&aliveWorkerPids.length>0)||(processes.length>0&&heartbeats.length>0); let b2b=null;try{b2b=JSON.parse(fs.readFileSync(B2B_STATE,'utf8'))}catch(_){}
   const result={checked_at:new Date().toISOString(),verdict:running?'HEALTHY':'NOT_RUNNING',swarm_running:running,
-    evidence:{agent_process_count:processes.length,fresh_heartbeat_count:heartbeats.length,telemetry_fresh:fresh,telemetry_age_seconds:ageMs===null?null:Math.round(ageMs/1000),telemetry_error:stateError,listening_ports:ports.filter(p=>p.status==='listening').map(p=>p.port)},ports,
+    evidence:{agent_process_count:processes.length+aliveWorkerPids.length,fresh_heartbeat_count:heartbeats.length+(workerFresh?1:0),telemetry_fresh:fresh||workerFresh,telemetry_age_seconds:ageMs===null?null:Math.round(ageMs/1000),telemetry_error:stateError,listening_ports:ports.filter(p=>p.status==='listening').map(p=>p.port),local_worker_swarm:workerHeartbeat?{status:workerHeartbeat.status,heartbeat_age_seconds:workerAgeMs===null?null:Math.round(workerAgeMs/1000),declared_pids:[...workerPids],alive_pids:aliveWorkerPids,queue:workerHeartbeat.queue,cost_model:workerHeartbeat.cost_model}:null},ports,
     pipelines:{b2b:b2b?{status:b2b.status,stage:b2b.stage,updated_at:b2b.updated_at,pid:b2b.pid}:null},
     note:running?'Process and heartbeat evidence are both present.':'No swarm success is claimed without both a live process and a recent heartbeat. Pipeline status is reported separately and never counted as swarm evidence.'}
   const reportDir=path.join(ROOT,'reports','tuios');fs.mkdirSync(reportDir,{recursive:true});
