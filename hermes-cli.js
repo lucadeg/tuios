@@ -967,6 +967,89 @@ async function showOpenChatCutTool() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// LDG INNOVATION MASTER CONTROL HUB & RUNNER
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function showLdgInnovationHub() {
+  clearScreen()
+  console.log(`${COLORS.green}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🏢 LDG INNOVATION · ENTERPRISE MASTER CONTROL & HARNESS HUB                             ║`)
+  console.log(`║    Next.js 15 · React 19 · Prisma · 104+ REQ-MVX Requisiti · B2B Pipeline & Swarms      ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+  console.log(`  Progetto: ${COLORS.yellow}${B2B_PROJECT}${COLORS.reset}`)
+  console.log(`  Autorità: ${COLORS.cyan}LDG Admin (God al di sopra di tutti)${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}AZIONI RAPIDE LDG INNOVATION:${COLORS.reset}`)
+  console.log(`  [1]  ${COLORS.green}🚀 Avvia Web App Next.js Dev Server${COLORS.reset}      (Porta 3000 - npm run dev)`)
+  console.log(`  [2]  ${COLORS.yellow}📜 Valida Requisiti Sovrani & Matrice${COLORS.reset}     (104+ REQ-MVX Traceability)`)
+  console.log(`  [3]  ${COLORS.cyan}🤖 Esegui B2B Suite v2 (Pilot Lead Gen)${COLORS.reset}   (OSINT, Crawler & Video Prep)`)
+  console.log(`  [4]  ${COLORS.magenta}🥧 Lancia Pi Coding Agent con Kimi K3${COLORS.reset}     (Sessione AI su codice LDG)`)
+  console.log(`  [5]  ${COLORS.yellow}⚡ Check Ops Health & Alert Matrix${COLORS.reset}       (npm run ops:health)`)
+  console.log(`  [6]  ${COLORS.blue}🪟 Apri Finestra Indipendente LDG${COLORS.reset}        (Dedicated PowerShell Workspace)`)
+  console.log(`  [0]  ${COLORS.dim}Torna al Menu Principale${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  Seleziona azione (1-6, 0): `, async (choice) => {
+    rl.close()
+    const c = (choice || '').trim()
+    switch (c) {
+      case '1': {
+        console.log(`${COLORS.green}Avvio Next.js Dev Server per LDG Innovation...${COLORS.reset}`)
+        execSync(`start "LDG Innovation Next.js (Port 3000)" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'; npm run dev"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+        await waitForEnter()
+        showLdgInnovationHub()
+        break
+      }
+      case '2': {
+        console.log(`${COLORS.yellow}Esecuzione validazione requisiti LDG Innovation...${COLORS.reset}`)
+        try { execSync('npm run requirements:validate', { stdio: 'inherit', cwd: B2B_PROJECT }) }
+        catch (e) { console.error(`${COLORS.red}Errore durante la validazione: ${e.message}${COLORS.reset}`) }
+        await waitForEnter()
+        showLdgInnovationHub()
+        break
+      }
+      case '3': {
+        console.log(`${COLORS.cyan}Avvio B2B Suite v2 Pilot su LDG Innovation...${COLORS.reset}`)
+        try { execSync('python scripts/b2b_suite_v2.py --mode generate --input data/b2b_acquisition/verified_inputs/blackshape_minimal_v2.json --limit 1', { stdio: 'inherit', cwd: B2B_PROJECT }) }
+        catch (e) { console.error(`${COLORS.red}Errore esecuzione B2B Suite: ${e.message}${COLORS.reset}`) }
+        await waitForEnter()
+        showLdgInnovationHub()
+        break
+      }
+      case '4': {
+        console.log(`${COLORS.magenta}Avvio Pi Coding Agent con Kimi K3 MoE per LDG Innovation...${COLORS.reset}`)
+        const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
+        if (fs.existsSync(piKimi)) {
+          execSync(`start "Pi Coding Agent - LDG Workspace" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'; & '${piKimi}'"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+        }
+        await waitForEnter()
+        showLdgInnovationHub()
+        break
+      }
+      case '5': {
+        console.log(`${COLORS.yellow}Controllo stato operativo e salute...${COLORS.reset}`)
+        try { execSync('npm run ops:health', { stdio: 'inherit', cwd: B2B_PROJECT }) }
+        catch (e) { console.error(`${COLORS.red}Errore ops health: ${e.message}${COLORS.reset}`) }
+        await waitForEnter()
+        showLdgInnovationHub()
+        break
+      }
+      case '6': {
+        console.log(`${COLORS.blue}Apertura console workspace per LDG Innovation...${COLORS.reset}`)
+        execSync(`start "LDG Innovation Workspace" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+        await waitForEnter()
+        showLdgInnovationHub()
+        break
+      }
+      case '0':
+      default:
+        showMenu()
+    }
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // TERMINAL MULTIPLEXER (N DEDICATED PANELS PER ACTIVE JOB & ECOSYSTEM)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -993,18 +1076,20 @@ async function showMultiTerminalLauncher() {
   console.log(`  [2]  ${COLORS.blue}🧠 Finestra Indipendente: Kimi K3 Wide-Context Router${COLORS.reset}  (tuios -7)`)
   console.log(`  [3]  ${COLORS.cyan}💬 Finestra Indipendente: Direct Swarm Chat REPL${COLORS.reset}       (tuios -c)`)
   console.log(`  [4]  ${COLORS.magenta}🎬 Finestra Indipendente: OpenChatCut Video Editor${COLORS.reset}     (tuios -v)`)
-  console.log(`  [5]  ${COLORS.magenta}🥧 Finestra Indipendente: Pi Coding Agent Interactive${COLORS.reset}  (tuios -2)`)
+  console.log(`  [5]  ${COLORS.magenta}🥧 Finestra Indipendente: Pi Coding Agent con Kimi K3${COLORS.reset}   (tuios -2)`)
   console.log(`  [6]  ${COLORS.green}📊 Finestra Indipendente: Full Analytics & Charts${COLORS.reset}      (tuios -a)`)
   console.log(`  [7]  ${COLORS.cyan}🔲 Finestra Indipendente: Multiplexer Dual/Quad Split${COLORS.reset}  (tuios -m)`)
-  console.log(`  [8]  ${COLORS.bright}🚀 Windows Terminal 4-Pane Split Matrix (Tutto in 1 Finestra WT)${COLORS.reset}`)
+  console.log(`  [8]  ${COLORS.bright}🚀 Windows Terminal Matrix: LDG + Kimi K3 + Pi + TUIOS (Multi-Tab WT)${COLORS.reset}`)
+  console.log(`  [9]  ${COLORS.green}🏢 Finestra Indipendente: LDG Innovation Hub Workspace${COLORS.reset} (tuios --ldg)`)
   console.log(`  [0]  ${COLORS.dim}Torna al Menu Principale${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  rl.question(`  Seleziona terminale da avviare (1-8, 0): `, async (choice) => {
+  rl.question(`  Seleziona terminale da avviare (1-9, 0): `, async (choice) => {
     rl.close()
     const c = (choice || '').trim()
     const cliScript = path.join(HERMES_ROOT, 'tools', 'tuios', 'hermes-cli.js')
+    const piKimiBat = path.join(PI_DIR, 'pi-kimi.bat')
 
     switch (c) {
       case '1': {
@@ -1036,8 +1121,8 @@ async function showMultiTerminalLauncher() {
         break
       }
       case '5': {
-        console.log(`${COLORS.green}Avvio nuova finestra terminale per Pi Coding Agent...${COLORS.reset}`)
-        execSync(`start "Hermes - Pi Coding Agent" powershell -NoExit -Command "node '${cliScript}' -2"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        console.log(`${COLORS.green}Avvio nuova finestra terminale per Pi Coding Agent (Kimi K3)...${COLORS.reset}`)
+        execSync(`start "Pi Coding Agent - Kimi K3 Local" powershell -NoExit -Command "& '${piKimiBat}'"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
@@ -1059,15 +1144,22 @@ async function showMultiTerminalLauncher() {
       case '8': {
         console.log(`${COLORS.cyan}Avvio Windows Terminal Multi-Pane Matrix (wt split-pane)...${COLORS.reset}`)
         try {
-          const wtCmd = `wt -w 0 new-tab --title "Hermes Swarm 10h" -d "${HERMES_ROOT}" powershell -NoExit -Command "node '${cliScript}' -j" ; split-pane -V --title "Kimi K3 Router" -d "${HERMES_ROOT}" powershell -NoExit -Command "node '${cliScript}' -7" ; split-pane -H --title "Hermes Analytics" -d "${HERMES_ROOT}" powershell -NoExit -Command "node '${cliScript}' -a"`
+          const wtCmd = `wt -w 0 new-tab --title "LDG Innovation Hub" -d "${B2B_PROJECT}" powershell -NoExit -Command "node '${cliScript}' --ldg" ; split-pane -V --title "Pi Agent (Kimi K3)" -d "${PI_DIR}" powershell -NoExit -Command "& '${piKimiBat}'" ; split-pane -H --title "Kimi K3 Router" -d "${KIMI_DIR}" powershell -NoExit -Command "node '${cliScript}' -7"`
           execSync(wtCmd, { shell: 'cmd.exe' })
           console.log(`${COLORS.green}✅ Windows Terminal Multi-Pane Matrix avviato con successo!${COLORS.reset}`)
         } catch (e) {
           console.log(`${COLORS.yellow}wt.exe non disponibile, avvio finestre separate PowerShell...${COLORS.reset}`)
-          execSync(`start "Hermes - 10h Swarm Monitor" powershell -NoExit -Command "node '${cliScript}' -j"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+          execSync(`start "LDG Innovation Hub" powershell -NoExit -Command "node '${cliScript}' --ldg"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+          execSync(`start "Pi Agent (Kimi K3)" powershell -NoExit -Command "& '${piKimiBat}'"`, { cwd: PI_DIR, shell: 'cmd.exe' })
           execSync(`start "Hermes - Kimi K3 Router" powershell -NoExit -Command "node '${cliScript}' -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
-          execSync(`start "Hermes - Analytics" powershell -NoExit -Command "node '${cliScript}' -a"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         }
+        await waitForEnter()
+        showMenu()
+        break
+      }
+      case '9': {
+        console.log(`${COLORS.green}Avvio nuova finestra terminale per LDG Innovation Hub...${COLORS.reset}`)
+        execSync(`start "LDG Innovation Hub" powershell -NoExit -Command "node '${cliScript}' --ldg"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
@@ -1301,6 +1393,7 @@ async function showMenu() {
   printBanner()
 
   console.log(`  ${COLORS.bright}ENTERPRISE COMMANDS & SYSTEM SUBSYSTEMS:${COLORS.reset}`)
+  console.log(`  [I]  ${COLORS.green}${COLORS.bright}🏢 LDG Innovation Master Hub${COLORS.reset}        (Next.js App, B2B Suite, Requisiti & Pi Agent)`)
   console.log(`  [N]  ${COLORS.yellow}${COLORS.bright}🎯 Crea Nuovo Goal / Job Swarm${COLORS.reset}    (Imposta obiettivi, workflow, scadenze & daily)`)
   console.log(`  [B]  ${COLORS.cyan}${COLORS.bright}🚀 Swarm Pipeline B2B & Jobs Engine${COLORS.reset} (Scraping, OSINT, Audit, CRO Demo, Ads, Pack)`)
   console.log(`  [C]  ${COLORS.cyan}💬 Chat Diretta con Hermes & Swarm${COLORS.reset}    (Live terminal REPL & real agent dispatch)`)
@@ -1322,7 +1415,7 @@ async function showMenu() {
   console.log(`  [E]  ${COLORS.magenta}👥 130+ Enterprise Agents Roster${COLORS.reset}      (Inspect all 130+ agents in 9 divisions)`)
   console.log(`  [T]  ${COLORS.green}🔒 HTP-V5 Traceability & Compliance${COLORS.reset}  (Merkle DAG, ISO 27001/42001, NIS2 audit)`)
   console.log(`  [1]  ${COLORS.cyan}🐝 Run Swarm Autonomous Turn${COLORS.reset}          (Block Buzz multi-agent cycle)`)
-  console.log(`  [2]  ${COLORS.magenta}🥧 Pi Coding Agent (Interactive)${COLORS.reset}       (Terminal harness: read/write/edit/bash)`)
+  console.log(`  [2]  ${COLORS.magenta}🥧 Pi Coding Agent (Kimi K3 MoE)${COLORS.reset}     (Zero Costi API, Local C-Engine)`)
   console.log(`  [3]  ${COLORS.magenta}🥧 Pi Coding Task (Headless)${COLORS.reset}           (Execute single refactoring mission)`)
   console.log(`  [4]  ${COLORS.green}🏛️  Agent Bibliotecario Search${COLORS.reset}         (Search 46,210+ skills/MCP/docs)`)
   console.log(`  [5]  ${COLORS.green}🏛️  Agent Bibliotecario Stats${COLORS.reset}          (View indexed knowledge metrics)`)
@@ -1333,7 +1426,7 @@ async function showMenu() {
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 
-  rl.question(`  ${COLORS.bright}Select Option (N, B, C, J, M, X, U, V, 7, A, R, O, L, K, D, G, P, W, E, T, 0-8): ${COLORS.reset}`, async (choice) => {
+  rl.question(`  ${COLORS.bright}Select Option (I, N, B, C, J, M, X, U, V, 7, A, R, O, L, K, D, G, P, W, E, T, 0-8): ${COLORS.reset}`, async (choice) => {
     rl.close()
     await handleChoice(choice.trim())
   })
@@ -1343,6 +1436,12 @@ async function handleChoice(choice) {
   console.log('')
   const c = choice.toUpperCase()
   switch (c) {
+    case 'I':
+    case 'LDG':
+    case 'INNOVATION': {
+      await showLdgInnovationHub()
+      break
+    }
     case 'N':
     case 'NEW':
     case 'NEW_JOB':
@@ -1476,21 +1575,16 @@ async function handleChoice(choice) {
       break
     }
     case '2': {
-      console.log(`${COLORS.magenta}Launching Pi Coding Agent in interactive mode...${COLORS.reset}`)
-      const cliEntry = path.join(PI_DIR, 'packages', 'coding-agent', 'dist', 'cli.js')
-      if (fs.existsSync(cliEntry)) {
+      console.log(`${COLORS.magenta}Launching Pi Coding Agent with Kimi K3 Local MoE...${COLORS.reset}`)
+      const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
+      if (fs.existsSync(piKimi)) {
         try {
-          execSync(`node "${cliEntry}"`, { stdio: 'inherit', cwd: HERMES_ROOT })
+          execSync(`call "${piKimi}"`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
         } catch (e) {
-          console.error(`${COLORS.red}Error launching Pi: ${e.message}${COLORS.reset}`)
+          console.error(`${COLORS.red}Error launching Pi Kimi: ${e.message}${COLORS.reset}`)
         }
       } else {
-        console.log(`${COLORS.yellow}Running Pi harness from source with tsx...${COLORS.reset}`)
-        try {
-          execSync(`cd /d "${PI_DIR}" && npx tsx packages/coding-agent/src/cli.ts`, { stdio: 'inherit' })
-        } catch (e) {
-          console.error(`${COLORS.red}Error running Pi harness: ${e.message}${COLORS.reset}`)
-        }
+        console.log(`${COLORS.yellow}Pi Kimi batch runner not found in ${piKimi}.${COLORS.reset}`)
       }
       await waitForEnter()
       showMenu()
@@ -1541,10 +1635,13 @@ async function handleChoice(choice) {
       break
     }
     case '6': {
-      console.log(`${COLORS.yellow}=== Hermes Local Runtime & Port Monitor ===${COLORS.reset}`)
+      console.log(`${COLORS.yellow}=== Hermes Local Runtime, Services & Projects Monitor ===${COLORS.reset}`)
       const health = path.join(HERMES_ROOT, 'tools', 'tuios', 'swarm_health_check.cjs')
-      try { execSync(`node "${health}"`, { stdio: 'inherit', cwd: HERMES_ROOT }) }
-      catch (_) { console.error(`${COLORS.red}Uno o più servizi non sono attivi.${COLORS.reset}`) }
+      try {
+        execSync(`node "${health}"`, { stdio: 'inherit', cwd: HERMES_ROOT })
+      } catch (e) {
+        console.error(`${COLORS.red}Errore esecuzione monitor: ${e.message}${COLORS.reset}`)
+      }
       await waitForEnter()
       showMenu()
       break
@@ -1561,12 +1658,29 @@ async function handleChoice(choice) {
       showMenu()
       break
     }
-    case '8': {
-      console.log(`${COLORS.cyan}Opening Standalone 3D Neural Swarm Galaxy Brain...${COLORS.reset}`)
+    case '8':
+    case 'GALAXY':
+    case 'BRAIN': {
+      console.log(`${COLORS.cyan}Launching Pi Galaxy Brain 3D Live Telemetry HUD...${COLORS.reset}`)
+      const servePy = path.join(PI_DIR, 'serve_galaxy_brain.py')
       const htmlPath = path.join(PI_DIR, 'galaxy-brain.html')
-      if (fs.existsSync(htmlPath)) {
-        execSync(`start "" "${htmlPath}"`, { shell: 'cmd.exe' })
-      }
+      
+      // Ensure daemon is started
+      try {
+        const net = require('net')
+        const client = new net.Socket()
+        client.setTimeout(200)
+        client.on('connect', () => { client.destroy() })
+        client.on('error', () => {
+          if (fs.existsSync(servePy)) {
+            spawn('python', [servePy], { detached: true, stdio: 'ignore', cwd: PI_DIR }).unref()
+          }
+        })
+        client.connect(5199, '127.0.0.1')
+      } catch (e) {}
+
+      console.log(`Live Dashboard: ${COLORS.green}http://127.0.0.1:5199${COLORS.reset}`)
+      execSync(`start "" "http://127.0.0.1:5199" 2>nul || start "" "${htmlPath}"`, { shell: 'cmd.exe' })
       await waitForEnter()
       showMenu()
       break
@@ -1597,7 +1711,40 @@ const args = process.argv.slice(2)
 if (args.length > 0) {
   const command = args[0].toLowerCase()
   if (command === '--help' || command === '-h' || command === 'help') {
-    console.log(`TUIOS commands:\n  --swarm, --swarm-health   Verify live process + recent heartbeat evidence\n  --b2b-worker-start [N]    Start N local zero-API-cost contact workers\n  --b2b-worker-stop         Request a clean worker-pool shutdown\n  --b2b-worker-status       Print worker PID, heartbeat and queue evidence\n  --hermes-runtime-status   Run the clean Hermes CLI status command\n  --puglia-db-refresh       Rebuild, enrich and validate the 1,500-organization DB\n  --puglia-db-status        Re-run and print the Puglia database quality gate\n  --ports                   Probe actual TCP ports\n  --repo-audit              Generate a deterministic Git repository report\n  --b2b-intake <file>       Normalize CSV, JSON or SQLite contacts without trusting imported fields\n  --b2b-run [options]       Run intake/crawl/preflight/generation/visual QA\n  --b2b-status              Show the last observed B2B pipeline state\n  --audit, --traceability   Show traceability data\n  --stats                   Show librarian statistics using the configured runtime\n  --pi                      Launch Pi interactively`)
+    console.log(`TUIOS commands:
+  --ldg, --ldg-innovation   Open LDG Innovation Master Control Hub
+  --ldg-dev                 Start LDG Innovation Next.js 15 Dev Server (port 3000)
+  --ldg-b2b                 Run LDG Innovation B2B Acquisition Suite
+  --pi, --pi-kimi           Launch Pi Coding Agent with Kimi K3 MoE
+  --swarm, --swarm-health   Verify live process + recent heartbeat evidence
+  --b2b-worker-start [N]    Start N local zero-API-cost contact workers
+  --b2b-worker-stop         Request a clean worker-pool shutdown
+  --b2b-worker-status       Print worker PID, heartbeat and queue evidence
+  --hermes-runtime-status   Run the clean Hermes CLI status command
+  --puglia-db-refresh       Rebuild, enrich and validate the 1,500-organization DB
+  --puglia-db-status        Re-run and print the Puglia database quality gate
+  --ports                   Probe actual TCP ports
+  --repo-audit              Generate a deterministic Git repository report
+  --b2b-intake <file>       Normalize CSV, JSON or SQLite contacts without trusting imported fields
+  --b2b-run [options]       Run intake/crawl/preflight/generation/visual QA
+  --b2b-status              Show the last observed B2B pipeline state
+  --audit, --traceability   Show traceability data
+  --stats                   Show librarian statistics using the configured runtime`)
+    process.exit(0)
+  } else if (command === '--ldg' || command === '--ldg-innovation' || command === 'ldg' || command === '-i') {
+    handleChoice('I')
+  } else if (command === '--ldg-dev' || command === 'ldg-dev') {
+    console.log(`Starting LDG Innovation Next.js 15 dev server...`)
+    execSync(`start "LDG Innovation Next.js (Port 3000)" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'; npm run dev"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+    process.exit(0)
+  } else if (command === '--ldg-b2b' || command === 'ldg-b2b') {
+    console.log(`Running LDG Innovation B2B Suite v2...`)
+    const result = spawnSync('python', ['scripts/b2b_suite_v2.py', '--mode', 'generate', '--input', 'data/b2b_acquisition/verified_inputs/blackshape_minimal_v2.json', '--limit', '1'], { cwd: B2B_PROJECT, stdio: 'inherit', shell: true })
+    process.exit(result.status === null ? 1 : result.status)
+  } else if (command === '--pi' || command === '--pi-kimi' || command === 'pi' || command === 'pi-kimi' || command === '-2') {
+    const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
+    const passArgs = args.slice(1).join(' ')
+    execSync(`call "${piKimi}" ${passArgs}`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
     process.exit(0)
   } else if (command === '--repo-audit' || command === 'repo-audit') {
     const auditScript = path.join(HERMES_ROOT, 'tools', 'tuios', 'repo_audit_real.cjs')
@@ -1702,10 +1849,24 @@ if (args.length > 0) {
     handleChoice('E')
   } else if (command === '--traceability' || command === '--audit' || command === 'traceability' || command === '-t') {
     handleChoice('T')
-  } else if (command === '--pi' || command === 'pi' || command === '-2') {
-    handleChoice('2')
-  } else if (command === '--stats' || command === 'stats' || command === '-5') {
-    handleChoice('5')
+  } else if (command === '--galaxy' || command === '--pi-galaxy' || command === 'galaxy' || command === '-8') {
+    handleChoice('8')
+  } else if (command === '--pi-hydra') {
+    const piBat = path.join(PI_DIR, 'pi.bat')
+    execSync(`call "${piBat}" --hydra`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
+    process.exit(0)
+  } else if (command === '--pi-claude') {
+    const piBat = path.join(PI_DIR, 'pi.bat')
+    execSync(`call "${piBat}" --claude`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
+    process.exit(0)
+  } else if (command === '--pi-gemini') {
+    const piBat = path.join(PI_DIR, 'pi.bat')
+    execSync(`call "${piBat}" --gemini`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
+    process.exit(0)
+  } else if (command === '--pi-r1') {
+    const piBat = path.join(PI_DIR, 'pi.bat')
+    execSync(`call "${piBat}" --r1`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
+    process.exit(0)
   } else {
     console.log(`Unknown command: ${command}. Launching interactive TUIOS...`)
     showMenu()
