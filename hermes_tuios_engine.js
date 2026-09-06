@@ -8,7 +8,7 @@
 const fs = require('fs')
 const path = require('path')
 const readline = require('readline')
-const { execSync } = require('child_process')
+const { spawnSync } = require('child_process')
 
 const HERMES_ROOT = path.resolve(__dirname, '..', '..')
 
@@ -177,24 +177,29 @@ function getTheme() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function fetchMultiJobsState() {
-  const liveStateFile = path.join(HERMES_ROOT, 'tools', 'swarm_goals', 'multi_jobs_live_state.json')
-  if (fs.existsSync(liveStateFile)) {
-    try {
-      const content = fs.readFileSync(liveStateFile, 'utf8')
-      const parsed = JSON.parse(content)
-      if (parsed && parsed.jobs && parsed.jobs.length > 0) {
-        return parsed
-      }
-    } catch (e) {}
+  const bridge = path.join(HERMES_ROOT, 'tools', 'tuios', 'hermes_data_bridge.py')
+  const candidates = [
+    process.env.TUIOS_PYTHON,
+    path.join('C:\\Users\\Deglu\\.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'python', 'python.exe'),
+    'python',
+  ].filter(Boolean)
+  for (const python of candidates) {
+    const result = spawnSync(python, [bridge], { encoding: 'utf8', cwd: HERMES_ROOT, timeout: 12000, windowsHide: true })
+    if (!result.error && result.status === 0) {
+      try {
+        const metrics = JSON.parse(result.stdout)
+        const live = metrics.live_swarm_job || {}
+        const registered = metrics.swarm_jobs?.jobs || []
+        const jobs = []
+        if (live.available) jobs.push(live)
+        for (const job of registered) {
+          if (!jobs.some(item => item.job_id === job.id)) jobs.push({ ...job, job_id: job.id, runtime_live: false, source: 'swarm_jobs_registry.json' })
+        }
+        return { jobs, metrics, source: bridge, available: true }
+      } catch (_) {}
+    }
   }
-  const daemonPy = path.join(HERMES_ROOT, 'tools', 'swarm_goals', 'multi_jobs_daemon.py')
-  if (fs.existsSync(daemonPy)) {
-    try {
-      const out = execSync(`python "${daemonPy}"`, { encoding: 'utf8', cwd: HERMES_ROOT })
-      return JSON.parse(out)
-    } catch (e) {}
-  }
-  return { jobs: [] }
+  return { jobs: [], metrics: {}, source: null, available: false }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,7 +238,10 @@ class TuiosEngine {
     this.tickTimer = setInterval(() => {
       this.state = fetchMultiJobsState()
       this.render()
-    }, 1000)
+    // The bridge gathers several live OS/service probes. Refreshing it every
+    // second blocks input on slower Windows/WSL hosts and adds no useful
+    // operator signal, so keep the dashboard responsive with a 5s cadence.
+    }, 5000)
 
     this.render()
   }
@@ -396,7 +404,7 @@ class TuiosEngine {
       { name: 'Window: Toggle Zoom (Fullscreen Pane)', run: () => { this.zoomed = !this.zoomed } },
       { name: 'Job: Focus 10H Ecosystem Codebase Audit', run: () => { this.focusedPane = 0; this.zoomed = true } },
       { name: 'Job: Focus LDG INNOVATION B2B Pipeline Engine', run: () => { this.focusedPane = 1; this.zoomed = true } },
-      { name: 'Ledger: Focus Merkle Audit Stream', run: () => { this.focusedPane = 2; this.zoomed = true } },
+      { name: 'Ledger: Focus Stored Audit Records', run: () => { this.focusedPane = 2; this.zoomed = true } },
       { name: 'Protocol: Focus Agent Shell & Gateway Ports', run: () => { this.focusedPane = 3; this.zoomed = true } },
       { name: 'Theme: Cycle Color Palette (TokyoNight/Dracula/Nord/Monokai/Cyberpunk)', run: () => { currentThemeIdx = (currentThemeIdx + 1) % THEME_KEYS.length } },
       { name: 'System: Trigger Live Telemetry Rescan', run: () => { this.state = fetchMultiJobsState() } },
@@ -460,15 +468,14 @@ class TuiosEngine {
 
   getPane1Content(job, innerW, innerH, t) {
     const c = []
-    const timeBar = this.renderBar(job.time_progress_pct || 79.4, 100, Math.min(14, innerW - 22), t)
-    const goalBar = this.renderBar(job.goals_progress_pct || 91.2, 100, Math.min(14, innerW - 22), t)
-
-    c.push(`Status:   ${t.success}${job.status || 'AUDITING_CONTINUOUS'}\x1b[0m | Mod: ${t.cyan}5.6 Luna\x1b[0m`)
-    c.push(`⏱️  Tempo:  [${timeBar}] ${(job.time_progress_pct || 79.4).toFixed(1)}% (${t.cyan}${job.elapsed_formatted || '7h 56m'}\x1b[0m / ${t.warning}${job.remaining_formatted || '2h 04m'}\x1b[0m)`)
-    c.push(`🎯 Goals:  [${goalBar}] ${(job.goals_progress_pct || 91.2).toFixed(1)}% (${t.success}11/11 Repos Verificate\x1b[0m)`)
-    c.push(`Target:   ${t.accent}${job.current_target_project || 'LDG_INNOVATION'}\x1b[0m (${t.dim}668 File · 55,908 LOC - 100% ADMITTED\x1b[0m)`)
-    c.push(`Lead:     ${t.magenta}${job.current_active_agent || 'compliance-guard'}\x1b[0m (${t.dim}Safety: LOCKED\x1b[0m)`)
-    c.push(`📁 Store:  ${t.cyan}tools/swarm_goals/all_projects_audit_matrix.json\x1b[0m`)
+    const timePct = Number.isFinite(job.time_progress_pct) ? job.time_progress_pct : null
+    const goalPct = Number.isFinite(job.goals_progress_pct) ? job.goals_progress_pct : null
+    c.push(`Status:   ${job.runtime_live ? t.success : t.warning}${job.status || 'NO RUNTIME EVIDENCE'}\x1b[0m`)
+    c.push(`Job ID:   ${t.accent}${job.job_id || job.id || 'N/D'}\x1b[0m`)
+    c.push(`Titolo:   ${t.cyan}${job.title || 'N/D'}\x1b[0m`)
+    c.push(timePct === null ? `Tempo:    N/D (no live runtime evidence)` : `Tempo:    [${this.renderBar(timePct, 100, Math.min(14, innerW - 22), t)}] ${timePct.toFixed(1)}%`)
+    c.push(goalPct === null ? `Goals:    N/D (no live runtime evidence)` : `Goals:    [${this.renderBar(goalPct, 100, Math.min(14, innerW - 22), t)}] ${goalPct.toFixed(1)}%`)
+    c.push(`Runtime:  ${job.runtime_live ? t.success + 'LIVE' : t.warning + 'REGISTRY/STALE'}\x1b[0m | Source: ${t.dim}${job.source || 'N/D'}\x1b[0m`)
     c.push(`──────────────────────────────────────────────────────────`)
 
     const logs = job.live_agent_logs || []
@@ -480,122 +487,51 @@ class TuiosEngine {
   }
 
   getPane2Content(job, innerW, innerH, t) {
-    const c = []
-    const timeBar = this.renderBar(job.time_progress_pct || 58.7, 100, Math.min(14, innerW - 22), t)
-    const goalBar = this.renderBar(job.goals_progress_pct || 79.7, 100, Math.min(14, innerW - 22), t)
-    const disk = job.storage_summary?.disk_usage?.total_formatted || '8.81 MB'
-    const compCount = job.storage_summary?.companies_in_db || 1500
-    const tasksCount = job.storage_summary?.task_audit_logs_count || 4500
-
-    c.push(`Status:   ${t.success}${job.status || 'STEP_4_CRO_DEMO'}\x1b[0m | SLA: ${t.cyan}3600s Daily\x1b[0m`)
-    c.push(`Target:   ${t.accent}Puglia (BA, LE, TA, FG, BR, BT) | Cap: 100,000 P.IVA Attive\x1b[0m`)
-    c.push(`Filtri:   ${t.dim}Fatturato €500k-€50M+ · Min 5 Dip · ATECO: DAP/Agro/Turismo/IT\x1b[0m`)
-    c.push(`⏱️  Tempo:  [${timeBar}] ${(job.time_progress_pct || 58.7).toFixed(1)}% (${t.cyan}${job.elapsed_formatted || '35m 12s'}\x1b[0m / ${t.warning}${job.remaining_formatted || '24m 48s'}\x1b[0m)`)
-    c.push(`🎯 Goals:  [${goalBar}] ${(job.goals_progress_pct || 79.7).toFixed(1)}% (${t.success}Fasi 4/6 Completate\x1b[0m)`)
-    c.push(`💾 Disco:  ${t.warning}${disk}\x1b[0m (${t.dim}DB: 4.35MB · Raw: 2.27MB · OSINT: 921KB · Demos: 573KB\x1b[0m)`)
-    c.push(`🗄️  DB:     ${t.cyan}b2b_pipeline.db\x1b[0m (${t.success}${compCount} Imprese · ${tasksCount} Task Tracciati\x1b[0m)`)
-    c.push(`📁 Root:   ${t.accent}mechaHD/LDG_INNOVATION/data/b2b_acquisition/\x1b[0m`)
-    c.push(`Lead:     ${t.magenta}${job.current_active_agent || 'landing-page-converter'}\x1b[0m (${t.dim}Step: CRO Demo\x1b[0m)`)
+    const c = this.getPane1Content(job, innerW, innerH, t)
     c.push(`──────────────────────────────────────────────────────────`)
-
-    const logs = job.live_agent_logs || []
-    for (let i = 0; i < logs.length; i++) {
-      const l = logs[i]
-      c.push(`[${l.timestamp}] ${t.magenta}${l.agent_id}\x1b[0m: ${l.action} ➔ ${t.cyan}${l.deliverable || 'file'}\x1b[0m`)
-    }
+    c.push(`Recurrence: ${job.recurrence || 'N/D'} | Runs recorded: ${job.runs_completed ?? 'N/D'}`)
+    c.push(`Last artifact: ${job.last_run_artifact || 'N/D'}`)
     return c
   }
 
   getPane3Content(job, innerW, innerH, t) {
     const c = []
-    c.push(`Ledger:   ${t.success}863 Recorded Executions (100% Pass Rate · Zero Data Loss)\x1b[0m`)
-    c.push(`Security: ${t.cyan}ED25519_SHA512 Signatures · SHA-256 Merkle DAG Chain\x1b[0m`)
-    c.push(`Verified: ${t.success}6,409 File Totali · 1,456,353 LOC Audited\x1b[0m`)
-    c.push(`Latest:   ${t.accent}LED-B2B-CRO042\x1b[0m (${t.dim}Target: LDG_INNOVATION | Status: ADMITTED\x1b[0m)`)
+    const ledger = this.state.metrics?.immutable_ledger || {}
+    const entries = ledger.recent_ledger_entries || []
+    c.push(`Ledger source: ${t.cyan}${ledger.source || 'N/D'}\x1b[0m`)
+    c.push(`Stored records: ${t.success}${ledger.total_executions_recorded || 0}\x1b[0m`)
+    c.push(`Crypto verification: ${ledger.cryptographic_verification_performed ? t.success + 'PERFORMED' : t.warning + 'NOT PERFORMED'}\x1b[0m`)
+    c.push(`Recorded PERFECT_MATCH rate: ${ledger.recorded_perfect_match_claim_rate_pct ?? 'N/D'}%`)
+    c.push(`Legacy pseudo-signature rows: ${ledger.legacy_pseudo_signature_records ?? 0}`)
     c.push(`──────────────────────────────────────────────────────────`)
-    c.push(`[12:35:13] ${t.accent}LED-B2B-CRO042\x1b[0m | landing-page-conv  | sha256:f33593cf… | CRO Demo HTML`)
-    c.push(`[12:33:13] ${t.accent}LED-B2B-SEC019\x1b[0m | sentrux-auditor    | sha256:d7fada2a… | Security Audit PDF`)
-    c.push(`[12:30:13] ${t.accent}LED-B2B-OSI008\x1b[0m | osint-enrich-agent | sha256:6c36a87c… | C-Level Contacts`)
-    c.push(`[12:26:13] ${t.accent}LED-B2B-SCR001\x1b[0m | scrapling-crawler  | sha256:181efb6e… | 1,500 Puglia DB`)
-    c.push(`[12:05:00] ${t.accent}LED-708985352C\x1b[0m | compliance-guard   | sha256:c0989012… | 55.9k LOC LDG`)
-    c.push(`[11:58:30] ${t.accent}LED-F63E44B4F4\x1b[0m | compliance-guard   | sha256:e8932401… | 97.5k LOC JARVIS`)
+    entries.slice(0, 6).forEach(entry => c.push(`${t.accent}${entry.entry_id}\x1b[0m | ${entry.actor_agent_id || 'N/D'} | ${entry.match_status || 'N/D'}`))
     return c
   }
 
   getPane4Content(job, innerW, innerH, t) {
     const c = []
-    c.push(`Hydra Router Core (3033):     [ ${t.success}ONLINE\x1b[0m ] Core Engine (3.4k tok/s)`)
-    c.push(`Web UI Proxy (3000):          [ ${t.success}ONLINE\x1b[0m ] Dashboard & Analytics`)
-    c.push(`Hermes IDE Unchained (5195):  [ ${t.warning}STANDBY\x1b[0m ] Theia Web IDE & Pi Agent`)
-    c.push(`Paperclip Swarm Hub (3100):   [ ${t.warning}STANDBY\x1b[0m ] Multi-Agent Coordination`)
+    const ports = this.state.metrics?.ports_probe || []
+    ports.slice(0, 7).forEach(port => c.push(`${String(port.name).slice(0, 32).padEnd(32)} [ ${port.status === 'ONLINE' ? t.success : t.warning}${port.status}\x1b[0m ] :${port.port}`))
     c.push(`──────────────────────────────────────────────────────────`)
-    c.push(`Hardware Resources:           ${t.cyan}CPU: 22.4% | RAM: 14.1/17.8 GB (79.2%)\x1b[0m`)
-    c.push(`Headless Optimization:        ${t.success}95% RAM / CPU Preserved vs Electron GUI\x1b[0m`)
-    c.push(`Active Swarm Neural Threads:  ${t.magenta}8 Active Workers Synchronized\x1b[0m`)
-    c.push(`Traceability Sovereign Score: ${t.success}100.0 / 100 (60-Field Admitted)\x1b[0m`)
+    const hw = this.state.metrics?.hardware || {}
+    c.push(`Hardware: ${t.cyan}CPU ${hw.cpu_percent ?? 'N/D'}% | RAM ${hw.used_ram_gb ?? 'N/D'}/${hw.total_ram_gb ?? 'N/D'} GB\x1b[0m`)
+    c.push(`Sensor: ${hw.sensor_source || 'unavailable'}`)
     return c
   }
 
   getZoomedContent(paneIdx, j1, j2, innerW, innerH, t) {
-    const c = []
+    if (paneIdx === 2) return this.getPane3Content(j1, innerW, innerH, t)
+    if (paneIdx === 3) return this.getPane4Content(j2, innerW, innerH, t)
     const job = paneIdx === 0 ? j1 : j2
-    const timeBar = this.renderBar(job.time_progress_pct || 58.7, 100, Math.min(28, innerW - 32), t)
-    const goalBar = this.renderBar(job.goals_progress_pct || 79.7, 100, Math.min(28, innerW - 32), t)
-
-    c.push(`Job ID:                 ${t.accent}${job.job_id || 'JOB-SWARM-001'}\x1b[0m | Status: ${t.success}${job.status}\x1b[0m | Modello: ${t.cyan}${job.current_model || 'proxima-gpt'}\x1b[0m`)
-    c.push(`Titolo:                 ${t.warning}${job.title || 'Autonomous Swarm Execution'}\x1b[0m`)
-    c.push(`Progetto Target:        ${t.cyan}${job.project_name || job.project_id || 'Ecosistema Hermes'}\x1b[0m`)
-    c.push(`Timing:                 Avvio: ${job.start_time_local || '04:11:01'} | Fine Prevista: ${job.scheduled_end_time_local || '14:11:01'}`)
-    c.push(`⏱️  Avanzamento Tempo:    [${timeBar}] ${(job.time_progress_pct || 0).toFixed(1)}% (${t.cyan}${job.elapsed_formatted}\x1b[0m / ${t.warning}${job.remaining_formatted}\x1b[0m)`)
-    c.push(`🎯  Avanzamento Obiettivi:[${goalBar}] ${(job.goals_progress_pct || 0).toFixed(1)}% (${t.success}${job.performance_status || 'ATTIVO'}\x1b[0m)`)
-    c.push(`Agent Coordinator:      ${t.magenta}${job.current_active_agent}\x1b[0m (${job.current_active_role || 'Lead'})`)
-    c.push(`Sicurezza Sovrana:      ${t.success}SOVEREIGN_NON_DESTRUCTIVE_READ_ONLY (ATTIVO)\x1b[0m`)
-
-    if (paneIdx === 1) {
-      const diskSummary = job.storage_summary?.disk_usage?.total_formatted || '8.81 MB'
-      const breakdown = job.storage_summary?.disk_usage?.categories_breakdown || {}
-      const compCount = job.storage_summary?.companies_in_db || 1500
-      const tasksCount = job.storage_summary?.task_audit_logs_count || 4500
-
-      c.push(`──────────────────────────────────────────────────────────────────────────────────────────`)
-      c.push(`${t.accent}SEGMENTAZIONE STRATEGICA & FILTRI DI RICERCA PUGLIA (100.000 IMPRESE CAP):\x1b[0m`)
-      c.push(`  • Territorio:         ${t.cyan}Puglia (Bari BA, Lecce LE, Taranto TA, Foggia FG, Brindisi BR, BAT)\x1b[0m`)
-      c.push(`  • Stato Fiscale:      ${t.success}Partite IVA Attive (Escluse Cessate, Fallite o in Liquidazione)\x1b[0m`)
-      c.push(`  • Range Fatturato:    ${t.warning}€ 500.000 — € 50.000.000+ | Minimo 5 Dipendenti\x1b[0m`)
-      c.push(`  • Tipologia Società:  ${t.cyan}S.p.A., S.r.l., S.r.l.s., Consorzi Industriali, Cooperative\x1b[0m`)
-      c.push(`  • Cluster ATECO:      ${t.magenta}Aerospazio (DAP), Agroalimentare DOP, Luxury Hospitality, Marmi, Logistica, IT\x1b[0m`)
-
-      c.push(`──────────────────────────────────────────────────────────────────────────────────────────`)
-      c.push(`${t.accent}💾 SPAZIO SU DISCO & GESTIONE FILE (Totale Occupato: ${diskSummary} · Policy: 7_YEARS_NIS2 · Quality Score: 100/100):\x1b[0m`)
-      c.push(`  🗄️  Database Relazionale: ${t.success}b2b_pipeline.db${t.dockFg} (${breakdown.database?.formatted || '4.38 MB'} · ${compCount} Imprese · ${tasksCount} Task Tracciati) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/b2b_pipeline.db\x1b[0m`)
-      c.push(`  📊  Dataset Imprese JSON: ${t.cyan}companies_raw_dataset.json${t.dockFg} (${breakdown.raw_datasets?.formatted || '2.27 MB'}) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/companies_raw_dataset.json\x1b[0m`)
-      c.push(`  👤  Dossier OSINT C-Level:${t.magenta}enriched_leads_dossier.json${t.dockFg} (${breakdown.osint_dossiers?.formatted || '922 KB'}) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/enriched_leads_dossier.json\x1b[0m`)
-      c.push(`  🛡️  Audit di Sicurezza:   ${t.success}security_audits/${t.dockFg} (${breakdown.security_audits?.formatted || '1.85 MB'} · ${breakdown.security_audits?.count || 1500} Report) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/security_audits\x1b[0m`)
-      c.push(`  🎨  Mockup Frontend CRO:  ${t.cyan}cro_demos/${t.dockFg} (${breakdown.cro_demos?.formatted || '3.47 MB'} · ${breakdown.cro_demos?.count || 1500} Demo HTML) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/cro_demos\x1b[0m`)
-      c.push(`  🎬  Video Ads Showcase:   ${t.warning}video_showcases/${t.dockFg} (${breakdown.video_showcases?.formatted || '2.46 MB'} · ${breakdown.video_showcases?.count || 1500} Video Specs) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/video_showcases\x1b[0m`)
-      c.push(`  💼  Packaging Proposte:   ${t.magenta}proposals/${t.dockFg} (${breakdown.proposals?.formatted || '2.01 MB'} · ${breakdown.proposals?.count || 1500} Offerte Deck) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/proposals\x1b[0m`)
-      c.push(`  📜  Merkle Manifest:      ${t.warning}manifest.json${t.dockFg} (${breakdown.manifest?.formatted || '445 KB'} · 6,003 Artifacts SHA-256) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/manifest.json\x1b[0m`)
-      c.push(`  ✅  Report Audit Qualità: ${t.success}DATA_QUALITY_AUDIT_REPORT.json${t.dockFg} (Score 100/100 · PASS) ➔ file:///C:/Users/Deglu/.hermes/mechaHD/LDG_INNOVATION/data/b2b_acquisition/DATA_QUALITY_AUDIT_REPORT.json\x1b[0m`)
-    }
-
+    const c = this.getPane1Content(job, innerW, innerH, t)
     c.push(`──────────────────────────────────────────────────────────────────────────────────────────`)
-    c.push(`${t.accent}DELIVERABLE FISICI GENERATI, STATO DI AVANZAMENTO & LOG STREAM:\x1b[0m`)
-
+    c.push(`Project: ${job.project_name || job.project_id || 'N/D'}`)
+    c.push(`Start: ${job.start_time_local || 'N/D'} | Scheduled end: ${job.scheduled_end_time_local || 'N/D'}`)
+    c.push(`Current agent: ${job.current_active_agent || 'N/D'} | Model: ${job.current_model || 'N/D'}`)
+    c.push(`Evidence age: ${job.evidence_age_seconds ?? 'N/D'} seconds`)
     const logs = job.live_agent_logs || []
-    for (let i = 0; i < logs.length; i++) {
-      const l = logs[i]
-      c.push(`[${l.timestamp}] ${t.magenta}${l.agent_id}\x1b[0m: ${l.action} ➔ ${t.cyan}${l.deliverable || 'deliverable'}\x1b[0m (${t.success}${l.ledger_entry?.[0] || 'SAVED'}\x1b[0m)`)
-    }
-
-    if (job.pipeline_steps) {
-      c.push(`──────────────────────────────────────────────────────────────────────────────────────────`)
-      c.push(`${t.accent}MATRICE MILESTONE & STATO DELLE 6 FASI DI PIPELINE:\x1b[0m`)
-      job.pipeline_steps.forEach(p => {
-        const icon = p.status.includes('COMPLETED') ? `${t.success}✔` : p.status.includes('IN_PROGRESS') ? `${t.warning}▶` : `${t.dim}○`
-        c.push(`  ${icon} Step ${p.step}: [${p.id}] ${p.name} ➔ ${t.cyan}${p.deliverable}\x1b[0m (${p.status})`)
-      })
-    }
-
+    c.push(`Recorded log entries: ${logs.length}`)
+    logs.slice(0, 10).forEach(log => c.push(`[${log.timestamp || 'N/D'}] ${log.agent_id || 'N/D'}: ${log.action || 'N/D'}`))
     return c
   }
 
@@ -627,10 +563,10 @@ class TuiosEngine {
     if (this.zoomed) {
       // Single Zoomed Pane
       const titles = [
-        `⏳ PANE 1: 10H ECOSYSTEM CODEBASE AUDIT (${(j1.goals_progress_pct || 91.2).toFixed(1)}%)`,
-        `🚀 PANE 2: LDG INNOVATION B2B ACQUISITION (${(j2.goals_progress_pct || 79.7).toFixed(1)}%)`,
-        `🔒 PANE 3: IMMUTABLE AUDIT LEDGER (863 Verified)`,
-        `⚡ PANE 4: RUNTIME PORTS & AGENT PROTOCOL`
+        `⏳ PANE 1: ${j1.job_id || j1.id || 'NO JOB EVIDENCE'}`,
+        `🚀 PANE 2: ${j2.job_id || j2.id || 'NO SECOND JOB'}`,
+        `🔒 PANE 3: STORED LEDGER RECORDS`,
+        `⚡ PANE 4: RUNTIME PORT PROBES`
       ]
       const zoomedContent = this.getZoomedContent(this.focusedPane, j1, j2, width - 4, mainHeight - 2, t)
       const boxLines = this.buildBox(titles[this.focusedPane], zoomedContent, width, mainHeight, true, t)
@@ -644,8 +580,8 @@ class TuiosEngine {
       const p1Content = this.getPane1Content(j1, leftW - 4, mainHeight - 2, t)
       const p2Content = this.getPane2Content(j2, rightW - 4, mainHeight - 2, t)
 
-      const leftLines = this.buildBox(`⏳ PANE 1: 10H AUDIT (${(j1.goals_progress_pct || 91.2).toFixed(1)}%)`, p1Content, leftW, mainHeight, this.focusedPane === 0, t)
-      const rightLines = this.buildBox(`🚀 PANE 2: LDG B2B ACQUISITION (${(j2.goals_progress_pct || 79.7).toFixed(1)}%)`, p2Content, rightW, mainHeight, this.focusedPane === 1, t)
+      const leftLines = this.buildBox(`⏳ PANE 1: ${j1.job_id || j1.id || 'N/D'}`, p1Content, leftW, mainHeight, this.focusedPane === 0, t)
+      const rightLines = this.buildBox(`🚀 PANE 2: ${j2.job_id || j2.id || 'N/D'}`, p2Content, rightW, mainHeight, this.focusedPane === 1, t)
 
       for (let r = 0; r < mainHeight; r++) {
         buf += (leftLines[r] || '') + (rightLines[r] || '') + '\n'
@@ -659,8 +595,8 @@ class TuiosEngine {
       const p1Content = this.getPane1Content(j1, width - 4, topH - 2, t)
       const p2Content = this.getPane2Content(j2, width - 4, botH - 2, t)
 
-      const topLines = this.buildBox(`⏳ PANE 1: 10H AUDIT (${(j1.goals_progress_pct || 91.2).toFixed(1)}%)`, p1Content, width, topH, this.focusedPane === 0, t)
-      const botLines = this.buildBox(`🚀 PANE 2: LDG B2B ACQUISITION (${(j2.goals_progress_pct || 79.7).toFixed(1)}%)`, p2Content, width, botH, this.focusedPane === 1, t)
+      const topLines = this.buildBox(`⏳ PANE 1: ${j1.job_id || j1.id || 'N/D'}`, p1Content, width, topH, this.focusedPane === 0, t)
+      const botLines = this.buildBox(`🚀 PANE 2: ${j2.job_id || j2.id || 'N/D'}`, p2Content, width, botH, this.focusedPane === 1, t)
 
       buf += topLines.join('\n') + '\n' + botLines.join('\n') + '\n'
 
@@ -676,9 +612,9 @@ class TuiosEngine {
       const p3Content = this.getPane3Content(j1, leftW - 4, botH - 2, t)
       const p4Content = this.getPane4Content(j2, rightW - 4, botH - 2, t)
 
-      const p1Lines = this.buildBox(`⏳ PANE 1: 10H ECOSYSTEM AUDIT (${(j1.goals_progress_pct || 91.2).toFixed(1)}%)`, p1Content, leftW, topH, this.focusedPane === 0, t)
-      const p2Lines = this.buildBox(`🚀 PANE 2: LDG B2B PIPELINE (${(j2.goals_progress_pct || 79.7).toFixed(1)}%)`, p2Content, rightW, topH, this.focusedPane === 1, t)
-      const p3Lines = this.buildBox(`🔒 PANE 3: MERKLE LEDGER (863 Records)`, p3Content, leftW, botH, this.focusedPane === 2, t)
+      const p1Lines = this.buildBox(`⏳ PANE 1: ${j1.job_id || j1.id || 'N/D'}`, p1Content, leftW, topH, this.focusedPane === 0, t)
+      const p2Lines = this.buildBox(`🚀 PANE 2: ${j2.job_id || j2.id || 'N/D'}`, p2Content, rightW, topH, this.focusedPane === 1, t)
+      const p3Lines = this.buildBox(`🔒 PANE 3: STORED LEDGER RECORDS`, p3Content, leftW, botH, this.focusedPane === 2, t)
       const p4Lines = this.buildBox(`⚡ PANE 4: PORTS & RUNTIME PROTOCOL`, p4Content, rightW, botH, this.focusedPane === 3, t)
 
       for (let r = 0; r < topH; r++) {
@@ -785,13 +721,47 @@ function launchTuiosMultiplexer(onExitCallback) {
   engine.start()
 }
 
+function runSelfTest() {
+  const engine = Object.create(TuiosEngine.prototype)
+  engine.focusedPane = 0
+  engine.zoomed = false
+  engine.currentWorkspace = 1
+  engine.layout = 'quad'
+  engine.showPalette = false
+  engine.showHelp = false
+  engine.paletteSearch = ''
+  engine.paletteSelected = 0
+  engine.render = () => {}
+  const theme = THEMES.tokyonight
+  const box = engine.buildBox('SELF TEST', ['one', 'two'], 32, 6, true, theme)
+  const checks = {
+    box_height: box.length === 6,
+    box_width: box.every(line => visibleLength(line) === 32),
+    palette: engine.getFilteredPaletteActions().length >= 8,
+  }
+  engine.handleKeypress(' ', { name: 'space' })
+  checks.layout_cycle = engine.layout === 'dual_v'
+  engine.handleKeypress('z', { name: 'z' })
+  checks.zoom_toggle = engine.zoomed === true
+  engine.handleKeypress('', { name: 'tab', shift: false })
+  checks.focus_cycle = engine.focusedPane === 1
+  return { ok: Object.values(checks).every(Boolean), checks }
+}
+
 if (require.main === module) {
-  launchTuiosMultiplexer(() => {
-    process.exit(0)
-  })
+  if (process.argv.includes('--self-test')) {
+    const result = runSelfTest()
+    process.stdout.write(`${JSON.stringify(result)}\n`)
+    process.exit(result.ok ? 0 : 2)
+  } else {
+    launchTuiosMultiplexer(() => {
+      process.exit(0)
+    })
+  }
 }
 
 module.exports = {
   TuiosEngine,
-  launchTuiosMultiplexer
+  launchTuiosMultiplexer,
+  runSelfTest,
 }

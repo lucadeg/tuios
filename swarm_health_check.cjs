@@ -54,7 +54,7 @@ function getActiveProcesses() {
     const list = Array.isArray(parsed) ? parsed : [parsed]
     return list.filter(p => !String(p.CommandLine || '').includes('Get-CimInstance'))
   } catch (_) {
-    return []
+    return null
   }
 }
 
@@ -97,15 +97,16 @@ function scanToolbox() {
 async function main() {
   console.log(`\n${COLORS.cyan}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
   console.log(`║ ⚡ HERMES MASTER RUNTIME, SERVICES, MECHAHD & TOOLBOX HEALTH MONITOR                    ║`)
-  console.log(`║    100% Real-Time Probes · Workflow 1-14 Sovereign Standard · ED25519 Merkle Ledger   ║`)
+  console.log(`║    TCP probes, filesystem inventory and process sensor status                           ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
 
   // Define All Services
   const serviceDefs = [
     { name: 'Pi Galaxy Brain HUD & Master Server', port: 5199, role: 'Master Control Hub & REPL' },
-    { name: 'Kimi K3 MoE C-Engine (Offline $0.00)', port: 8095, role: 'Native 1.5T Local Inference' },
+    { name: 'Kimi-compatible Provider Endpoint', port: 8095, role: 'Compatibility router; local checkpoint checked separately' },
     { name: 'Hydra Task Router (Multi-Model)', port: 8090, role: 'Claude, Gemini, DeepSeek R1' },
     { name: 'LDG Innovation Hub (Next.js 15)', port: 3000, role: 'Enterprise Flagship Platform' },
+    { name: 'LDG Innovation PostgreSQL', port: 5432, role: 'Operational database required by health checks' },
     { name: 'Paperclip Swarm Control Plane', port: 3100, role: 'AI-Agent Company Management' },
     { name: 'Hermes IDE Unchained', port: 5195, role: 'Sovereign IDE & 3D Dashboard' },
     { name: 'Hermes Office 3D Canvas', port: 3001, role: 'OpenClaw Next.js 16 3D Space' },
@@ -139,13 +140,15 @@ async function main() {
   })
 
   // Print Section 2: Active Processes
-  console.log(`\n  ${COLORS.bright}2. ACTIVE DAEMONS & HARNESS PROCESSES (${procs.length} RUNNING):${COLORS.reset}`)
-  if (procs.length > 0) {
+  console.log(`\n  ${COLORS.bright}2. ACTIVE DAEMONS & HARNESS PROCESSES (${procs ? `${procs.length} DETECTED` : 'SENSOR UNAVAILABLE'}):${COLORS.reset}`)
+  if (procs && procs.length > 0) {
     procs.slice(0, 8).forEach(p => {
       console.log(`  • [PID ${COLORS.yellow}${p.ProcessId}${COLORS.reset}] ${COLORS.green}${p.Name}${COLORS.reset} | ${COLORS.dim}${String(p.CommandLine || '').slice(0, 75)}...${COLORS.reset}`)
     })
-  } else {
+  } else if (procs) {
     console.log(`  • ${COLORS.dim}No detached background daemons detected in process table.${COLORS.reset}`)
+  } else {
+    console.log(`  • ${COLORS.yellow}Process inventory could not be read; port probes remain authoritative.${COLORS.reset}`)
   }
 
   // Print Section 3: MechaHD Projects Mapping
@@ -161,8 +164,8 @@ async function main() {
   }
 
   // Print Section 4: Toolbox Manager Mapping
-  console.log(`\n  ${COLORS.bright}4. SOVEREIGN TOOLBOX UTILITIES & AGENT PLATFORMS (${toolbox.length + 2} INDEXED):${COLORS.reset}`)
-  console.log(`  • ${COLORS.cyan}Paperclip${COLORS.reset} (Port :3100) · ${COLORS.cyan}Buzz${COLORS.reset} (Port :3005) · ${COLORS.cyan}Kimi K3 C-Engine${COLORS.reset} (Port :8095) · ${COLORS.cyan}Pi Coding Agent${COLORS.reset}`)
+  console.log(`\n  ${COLORS.bright}4. TOOLBOX DIRECTORIES (${toolbox.length} INDEXED):${COLORS.reset}`)
+  console.log(`  • ${COLORS.cyan}Paperclip${COLORS.reset} (Port :3100) · ${COLORS.cyan}Buzz${COLORS.reset} (Port :3005) · ${COLORS.cyan}Kimi-compatible endpoint${COLORS.reset} (Port :8095) · ${COLORS.cyan}Pi Coding Agent${COLORS.reset}`)
   console.log(`  • ${COLORS.dim}Tools catalog: ${toolbox.slice(0, 12).join(', ')} ... (${toolbox.length} tools)${COLORS.reset}`)
 
   // Print Section 5: Databases & Memory
@@ -170,15 +173,21 @@ async function main() {
   try {
     const sStat = fs.existsSync(STATE_DB) ? `${(fs.statSync(STATE_DB).size / (1024*1024)).toFixed(2)} MB` : 'N/A'
     const lStat = fs.existsSync(LEDGER_DB) ? `${(fs.statSync(LEDGER_DB).size / (1024*1024)).toFixed(2)} MB` : 'N/A'
-    console.log(`  • state.db: ${COLORS.green}${sStat}${COLORS.reset} | ledger.db: ${COLORS.green}${lStat}${COLORS.reset} (ED25519 Merkle DAG Active) | Goals Registry: ${COLORS.green}112 Atomic Goals (14 Phases)${COLORS.reset}`)
+    let goalsLabel = 'N/A'
+    if (fs.existsSync(GOALS_REGISTRY)) {
+      const goals = JSON.parse(fs.readFileSync(GOALS_REGISTRY, 'utf8'))
+      goalsLabel = `${goals.total_goals_count ?? goals.goals?.length ?? 0} goals / ${goals.phases_count ?? goals.workflow_phases?.length ?? 0} phases`
+    }
+    console.log(`  • state.db: ${COLORS.green}${sStat}${COLORS.reset} | ledger.db: ${COLORS.green}${lStat}${COLORS.reset} (file presence only) | Goals Registry: ${COLORS.green}${goalsLabel}${COLORS.reset}`)
   } catch (_) {}
 
   console.log(`\n  ──────────────────────────────────────────────────────────────────────────────────────────`)
-  console.log(`  ${COLORS.bright}VERDETTO SISTEMA:${COLORS.reset} ${onlineServices.length > 0 ? `${COLORS.green}🟢 SISTEMA OPERATIVO & ONLINE` : `${COLORS.yellow}🟡 SERVIZI IN STANDBY`}${COLORS.reset}`)
+  const allOnline = standbyServices.length === 0
+  console.log(`  ${COLORS.bright}VERDETTO SISTEMA:${COLORS.reset} ${allOnline ? `${COLORS.green}🟢 TUTTI I SERVIZI MONITORATI ONLINE` : `${COLORS.yellow}🟡 DEGRADATO: ${onlineServices.length}/${probedPorts.length} SERVIZI ONLINE`}${COLORS.reset}`)
   console.log(`  💡 Per avviare tutti i servizi con 1-click apri il Master Hub: ${COLORS.cyan}http://127.0.0.1:5199${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────\n`)
 
-  process.exitCode = 0
+  process.exitCode = allOnline ? 0 : 2
 }
 
 main().catch(err => {

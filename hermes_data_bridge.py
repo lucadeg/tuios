@@ -1,59 +1,8 @@
 #!/usr/bin/env python3
-"""
-@file_id          FILE-MVX-TUIOS-DATA-BRIDGE-004
-@artifact_kind    implementation
-@project_id       PRJ-HERMES-UNCHAINED
-@workspace_id     WKS-MVX-ROOT
-@app_id           APP-TUIOS-TERMINAL
-@module_id        MOD-TUIOS-REAL-DATA-BRIDGE
-@component_id     COMP-FULL-ENTERPRISE-ANALYTICS-ENGINE
-@bounded_context  runtime_data
-@epic_id          EPI-0099-HEADLESS_TUI
-@capability_id    CAP-ENTERPRISE-130-AGENTS-COMPLIANCE-METRICS
-@story_id         STORY-TUIOS-05
-@task_id          TASK-FULL-SYSTEM-ANALYTICS
-@sprint_id        SPR-01
-@release_slice_id RS-2026-08
-@requirement_refs REQ-MVX-0099;REQ-MVX-0088;REQ-MVX-0055;REQ-MVX-0042;REQ-MVX-0012
-@acceptance_refs  AC-ISO27001-001;AC-ISO42001-001;AC-GDPR-ART6;AC-NIS2-001
-@test_refs        TEST-TUIOS-DATA-BRIDGE-001
-@contract_refs    CNTR-DATA-TELEMETRY
-@evidence_refs    EVD-TUIOS-DATA-BRIDGE-001
-@depends_on_files state.db;projects.db;github-master-catalog.db;tools/buzz/buzz_state.json;seed_all_9_enterprise_divisions.js;seed_pure_it_enterprise_roster.js
-@used_by_files    tools/tuios/hermes-cli.js;apps/desktop/electron/main.cjs;apps/desktop/src/app/pi-galaxy-brain/index.tsx
-@schema_refs      SCH-TRACE-60
-@event_refs       EVT-ENTERPRISE-ANALYTICS-AGGREGATED
-@api_refs         API-TUIOS-METRICS
-@flow_lifecycle   active
-@actor_origin     agent:tuios-commander
-@actor_role       enterprise_telemetry_aggregator
-@security_level   CONFIDENTIAL_AUDITED
-@retention_policy 7_YEARS_NIS2
-@classification   RESTRICTED_SOVEREIGN
-@author           LDG Admin (God al di sopra di tutti)
-@author_signature SIG-MVX-LDG-GOD-001
-@git_commit_sha   c7f3b89a124d
-@repo_url         https://github.com/lucadeg/tuios.git
-@source_branch    main
-@merkle_parent    ROOT_GENESIS_001
-@merkle_root_hash b47c9f8a3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b
-@signature_scheme ED25519_SHA512
-@audit_signature  MEQCID1q8Z9xY8u7v6w5t4s3r2q1p0o9n8m7l6k5j4i3h2g1AiB2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
-@gdpr_basis       ART_6_1_F_LEGITIMATE_INTEREST
-@ai_act_risk_tier MINIMAL_RISK
-@iso27001_control A.12.1.2_CHANGE_MANAGEMENT
-@iso42001_control A.2_AI_SUPPLIER_ASSESSMENT
-@data_controller  LDG_INNOVATION_HOLDING
-@tenant_id        TNT-MVX-PRIMARY
-@created_at       2026-08-17T03:25:00.000Z
-@updated_at       2026-08-17T03:25:00.000Z
-@version          4.0.0
-@runtime_env      python311_hermes_venv
-@checksum_sha256  8e4c7b2a1f0d9e8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c
-@line_count       650
-@character_count  28000
-@admissibility    admitted
-@impl_status_tmp_mock false
+"""Evidence-backed telemetry bridge for the Hermes TUIOS surfaces.
+
+Filesystem declarations and historical database rows are reported as such. They
+are never promoted to runtime, cryptographic, compliance, or quality evidence.
 """
 
 import os
@@ -63,14 +12,17 @@ import sqlite3
 import socket
 import glob
 import re
+import shutil
+import time
+import ctypes
 try:
     import psutil
 except ImportError:
     psutil = None
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 
-HERMES_ROOT = r"C:\Users\Deglu\.hermes"
+HERMES_ROOT = os.path.abspath(os.environ.get("HERMES_ROOT") or os.path.join(os.path.dirname(__file__), "..", ".."))
 STATE_DB = os.path.join(HERMES_ROOT, "state.db")
 PROJECTS_DB = os.path.join(HERMES_ROOT, "projects.db")
 KANBAN_DB = os.path.join(HERMES_ROOT, "kanban.db")
@@ -89,10 +41,10 @@ def get_file_size_mb(path):
     return 0.0
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. 130+ ENTERPRISE AGENTS MATRIX & DIVISION ANALYTICS
+# 1. REGISTERED PERSONA INVENTORY & OBSERVED AGENT DEFINITIONS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def extract_all_130_agents():
+def extract_registered_agent_personas():
     seed_files = [
         os.path.join(HERMES_ROOT, "seed_all_9_enterprise_divisions.js"),
         os.path.join(HERMES_ROOT, "seed_pure_it_enterprise_roster.js"),
@@ -160,11 +112,6 @@ def extract_all_130_agents():
                         else:
                             div = "Engineering & IT Infrastructure"
 
-                    if div in division_counts:
-                        division_counts[div] += 1
-                    else:
-                        division_counts["Engineering & IT Infrastructure"] += 1
-
                     agent_id = name.lower().replace(' ', '-').replace('&', '').replace('/', '-').replace('(', '').replace(')', '')
                     if agent_id not in agents_map:
                         agents_map[agent_id] = {
@@ -176,27 +123,39 @@ def extract_all_130_agents():
                             "skills_count": len(skills),
                             "skills": skills[:5],
                             "reports_to": reports,
-                            "status": "active"
+                            "status": "registered_unverified"
                         }
         except Exception:
             pass
 
-    # Ensure all 6 live core swarm agents are present
-    core_agents = [
-        {"id": "hermes-orchestrator", "name": "Hermes Orchestrator", "title": "Core Autonomous Coordinator", "role": "coordinator", "division": "AI Research & Multi-Agent Swarm", "skills_count": 8, "skills": ["hermes-token-reasoning-optimizer", "buzz-monitor"], "reports_to": "LDG Admin", "status": "running"},
-        {"id": "pi-coding-agent", "name": "Pi Coding Agent", "title": "Autonomous Coding Harness & AST Refactorer", "role": "coder", "division": "AI Research & Multi-Agent Swarm", "skills_count": 6, "skills": ["pi-coding-agent", "code-refactor"], "reports_to": "hermes-orchestrator", "status": "running"},
-        {"id": "sentrux-auditor", "name": "Sentrux Security Auditor", "title": "Continuous Architectural & Security Sensor", "role": "security", "division": "Security, AppSec & Pentesting", "skills_count": 7, "skills": ["sentrux-auditor", "owasp-security-sweep"], "reports_to": "hermes-orchestrator", "status": "running"},
-        {"id": "agent-bibliotecario", "name": "Agent Bibliotecario", "title": "Librarian & Dynamic Resource Allocator", "role": "librarian", "division": "AI Research & Multi-Agent Swarm", "skills_count": 5, "skills": ["agent-bibliotecario"], "reports_to": "hermes-orchestrator", "status": "running"},
-        {"id": "compliance-and-traceability-guard", "name": "Traceability Guard", "title": "HTP-V5 & NIS2 Audit Controller", "role": "compliance", "division": "Legal, Compliance & GDPR/NIS2", "skills_count": 6, "skills": ["compliance-and-traceability-guard"], "reports_to": "Direzione Generale", "status": "running"},
-        {"id": "security-redteam-critic", "name": "Red Team Critic", "title": "HexStrike & Anti-Slop Vulnerability Critic", "role": "critic", "division": "Security, AppSec & Pentesting", "skills_count": 6, "skills": ["hexstrike-ai", "no-ai-slop"], "reports_to": "sentrux-auditor", "status": "running"}
-    ]
-    for ca in core_agents:
-        agents_map[ca["id"]] = ca
+    for agent in agents_map.values():
+        division = agent.get("division")
+        if division not in division_counts:
+            division = "Engineering & IT Infrastructure"
+        division_counts[division] += 1
+
+    detected_agent_definitions = 0
+    try:
+        with open(CATALOG_CACHE, "r", encoding="utf-8") as catalog_file:
+            detected_agent_definitions = int(json.load(catalog_file).get("totals", {}).get("agent_definitions_count", 0) or 0)
+    except Exception:
+        pass
 
     return {
-        "total_agents_count": len(agents_map),
+        "available": any(os.path.exists(item) for item in seed_files),
+        "source": "seed persona declarations plus catalog filesystem scan",
+        "total_agents_count": detected_agent_definitions,
+        "agent_definitions_detected_count": detected_agent_definitions,
+        "registered_personas_count": len(agents_map),
+        "operational_agents_count": 0,
+        "operational_agents_reason": "runtime activity is reported only by swarm telemetry",
+        "roster_kind": "seed_personas_unverified",
         "divisions_breakdown": division_counts,
-        "agents_roster": list(agents_map.values())
+        "agents_roster": list(agents_map.values()),
+        "limitations": [
+            "A seed persona is not an installed or running agent.",
+            "A detected agent definition is not operational until a task execution succeeds."
+        ]
     }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -245,7 +204,7 @@ def query_projects_deep_analytics():
                     "created_at": created_at,
                     "files_tracked": file_count,
                     "size_mb": round(total_bytes / (1024 * 1024), 2),
-                    "health_status": "HEALTHY_ONLINE" if ppath and os.path.exists(ppath) else "PATH_UNRESOLVED"
+                    "health_status": "DIRECTORY_PRESENT" if ppath and os.path.exists(ppath) else "PATH_UNRESOLVED"
                 })
             conn.close()
         except Exception:
@@ -303,27 +262,30 @@ def query_traceability_compliance():
     ]
     core_compliant = sum(1 for cf in core_files if os.path.exists(cf) and "@file_id" in open(cf, "r", encoding="utf-8", errors="ignore").read(500))
 
-    sovereign_score = round(((valid_file_id + valid_security_level + valid_merkle_root + valid_signature) / max(1, total_skills * 4)) * 100, 1)
+    metadata_coverage = round(((valid_file_id + valid_security_level + valid_merkle_root + valid_signature) / max(1, total_skills * 4)) * 100, 1)
 
     res = {
-        "sovereign_standard": "HTP-V5 (Hermes Traceability Protocol V5 - 60 Fields)",
+        "available": os.path.isdir(skills_dir),
+        "source": "static metadata presence scan; no cryptographic or legal certification",
+        "declared_standard": "HTP-V5 metadata headers",
         "total_skills_inspected": total_skills,
         "header_validations": {
             "file_id_present": valid_file_id,
             "security_level_classified": valid_security_level,
             "retention_policy_nis2": valid_retention,
             "merkle_dag_anchored": valid_merkle_root,
-            "ed25519_signatures_valid": valid_signature,
+            "signature_fields_present_unverified": valid_signature,
             "requirement_refs_linked": valid_req_refs,
-            "test_refs_verified": valid_test_refs,
-            "anti_mock_admitted": anti_mock_admitted
+            "test_refs_present_unverified": valid_test_refs,
+            "anti_mock_declarations_present_unverified": anti_mock_admitted
         },
-        "sovereign_compliance_score": f"{sovereign_score}%",
-        "core_framework_files_compliant": f"{core_compliant}/{len(core_files)} (100%)",
-        "nis2_retention_policy": "7_YEARS_NIS2 (Legitimate Interest Art. 6.1.f)",
-        "gdpr_right_to_erasure": "COMPLIANT_ISOLATED",
-        "iso27001_controls": ["A.12.1.2_CHANGE_MANAGEMENT", "A.9.2.1_USER_REGISTRATION", "A.10.1.1_CRYPTOGRAPHY"],
-        "iso42001_controls": ["A.2_AI_SUPPLIER_ASSESSMENT", "A.6.2_AI_SYSTEM_IMPACT", "A.8.4_DATA_QUALITY"]
+        "metadata_coverage_percent": metadata_coverage,
+        "core_framework_headers_present": f"{core_compliant}/{len(core_files)}",
+        "cryptographic_verification_performed": False,
+        "control_enforcement_verified": False,
+        "limitations": [
+            "Header presence is not proof that a signature, Merkle chain, retention policy, GDPR control, ISO control, or NIS2 control is valid or enforced."
+        ]
     }
     _TRACEABILITY_CACHE["timestamp"] = now
     _TRACEABILITY_CACHE["data"] = res
@@ -355,18 +317,14 @@ def query_swarm_workload():
         agent_activity[agent] = agent_activity.get(agent, 0) + 1
 
     return {
-        "swarm_id": active_swarm.get("swarm_id", "hermes-default-swarm"),
-        "name": active_swarm.get("name", "Hermes Core Autonomous Swarm"),
-        "status": active_swarm.get("status", "active"),
+        "available": bool(active_swarm or telemetry_events),
+        "source": BUZZ_STATE if os.path.exists(BUZZ_STATE) else None,
+        "swarm_id": active_swarm.get("swarm_id"),
+        "name": active_swarm.get("name"),
+        "status": active_swarm.get("status"),
         "active_agents_count": len(active_swarm.get("agents", [])),
         "agents": active_swarm.get("agents", []),
-        "eval_metrics": active_swarm.get("eval_metrics", {
-            "efficiency_score": 100.0,
-            "error_rate": 0.0,
-            "avg_latency_ms": 248,
-            "completed_tasks": 43,
-            "redteam_score": 100.0
-        }),
+        "eval_metrics": active_swarm.get("eval_metrics") or {},
         "telemetry_events_count": len(telemetry_events),
         "tool_invocations_breakdown": tool_counts,
         "agent_activity_heat": agent_activity,
@@ -469,9 +427,10 @@ def query_github_catalog():
 
 def query_ports():
     target_ports = [
-        {"port": 8095, "name": "Kimi K3 in C MoE Engine"},
+        {"port": 8095, "name": "Kimi-compatible First-Layer / Hydra Bridge"},
         {"port": 8090, "name": "Hydra Task Router"},
         {"port": 3000, "name": "LDG Innovation (Next.js 15)"},
+        {"port": 5432, "name": "LDG Innovation PostgreSQL"},
         {"port": 3033, "name": "Hydra Router Hub Core"},
         {"port": 5195, "name": "Hermes IDE Unchained"},
         {"port": 5199, "name": "Pi Galaxy Brain Live HUD"},
@@ -511,13 +470,17 @@ def query_git_velocity():
     }
 
 def query_storage_subsystem():
-    disk_c = psutil.disk_usage("C:\\")
+    # Storage must remain available even when the optional psutil package is
+    # absent from the selected TUIOS Python runtime.
+    disk_c = psutil.disk_usage("C:\\") if psutil is not None else shutil.disk_usage("C:\\")
+    percent_used = round((disk_c.used / disk_c.total) * 100, 1) if disk_c.total else None
     return {
         "drive_c": {
             "total_gb": round(disk_c.total / (1024**3), 2),
             "used_gb": round(disk_c.used / (1024**3), 2),
             "free_gb": round(disk_c.free / (1024**3), 2),
-            "percent_used": disk_c.percent
+            "percent_used": getattr(disk_c, "percent", percent_used),
+            "sensor_source": "psutil" if psutil is not None else "stdlib.shutil"
         },
         "database_sizes_mb": {
             "state.db": get_file_size_mb(STATE_DB),
@@ -537,7 +500,6 @@ def query_system_hardware():
             vm = psutil.virtual_memory()
             proc = psutil.Process()
             rss_mb = round(proc.memory_info().rss / (1024 * 1024), 2)
-            savings_percent = round(((480.0 - rss_mb) / 480.0) * 100, 1)
             return {
                 "cpu_percent": psutil.cpu_percent(interval=0.05),
                 "cpu_cores_physical": psutil.cpu_count(logical=False),
@@ -547,20 +509,129 @@ def query_system_hardware():
                 "used_ram_gb": round(vm.used / (1024**3), 2),
                 "ram_percent": vm.percent,
                 "process_rss_mb": rss_mb,
-                "headless_ram_savings_percent": savings_percent
+                "headless_ram_savings_percent": None,
+                "headless_ram_savings_reason": "no controlled GUI-versus-headless baseline has been measured",
+                "sensor_source": "psutil",
+                "sensor_available": True
             }
         except Exception:
             pass
+
+    if sys.platform == "win32":
+        try:
+            class FILETIME(ctypes.Structure):
+                _fields_ = [("low", ctypes.c_ulong), ("high", ctypes.c_ulong)]
+
+            class MEMORYSTATUSEX(ctypes.Structure):
+                _fields_ = [
+                    ("length", ctypes.c_ulong),
+                    ("memory_load", ctypes.c_ulong),
+                    ("total_phys", ctypes.c_ulonglong),
+                    ("avail_phys", ctypes.c_ulonglong),
+                    ("total_page_file", ctypes.c_ulonglong),
+                    ("avail_page_file", ctypes.c_ulonglong),
+                    ("total_virtual", ctypes.c_ulonglong),
+                    ("avail_virtual", ctypes.c_ulonglong),
+                    ("avail_extended_virtual", ctypes.c_ulonglong),
+                ]
+
+            class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+                _fields_ = [
+                    ("cb", ctypes.c_ulong),
+                    ("page_fault_count", ctypes.c_ulong),
+                    ("peak_working_set_size", ctypes.c_size_t),
+                    ("working_set_size", ctypes.c_size_t),
+                    ("quota_peak_paged_pool_usage", ctypes.c_size_t),
+                    ("quota_paged_pool_usage", ctypes.c_size_t),
+                    ("quota_peak_non_paged_pool_usage", ctypes.c_size_t),
+                    ("quota_non_paged_pool_usage", ctypes.c_size_t),
+                    ("pagefile_usage", ctypes.c_size_t),
+                    ("peak_pagefile_usage", ctypes.c_size_t),
+                ]
+
+            def filetime_value(value):
+                return (value.high << 32) | value.low
+
+            def system_times():
+                idle, kernel, user = FILETIME(), FILETIME(), FILETIME()
+                if not ctypes.windll.kernel32.GetSystemTimes(
+                    ctypes.byref(idle), ctypes.byref(kernel), ctypes.byref(user)
+                ):
+                    raise ctypes.WinError()
+                return tuple(filetime_value(value) for value in (idle, kernel, user))
+
+            before = system_times()
+            time.sleep(0.05)
+            after = system_times()
+            idle_delta = after[0] - before[0]
+            total_delta = (after[1] - before[1]) + (after[2] - before[2])
+            cpu_percent = round(100.0 * (1.0 - idle_delta / total_delta), 1) if total_delta else None
+
+            memory = MEMORYSTATUSEX()
+            memory.length = ctypes.sizeof(MEMORYSTATUSEX)
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(memory)):
+                raise ctypes.WinError()
+
+            counters = PROCESS_MEMORY_COUNTERS()
+            counters.cb = ctypes.sizeof(PROCESS_MEMORY_COUNTERS)
+            ctypes.windll.kernel32.GetCurrentProcess.restype = ctypes.c_void_p
+            process_handle = ctypes.windll.kernel32.GetCurrentProcess()
+            ctypes.windll.psapi.GetProcessMemoryInfo.argtypes = [
+                ctypes.c_void_p,
+                ctypes.POINTER(PROCESS_MEMORY_COUNTERS),
+                ctypes.c_ulong,
+            ]
+            ctypes.windll.psapi.GetProcessMemoryInfo.restype = ctypes.c_int
+            if not ctypes.windll.psapi.GetProcessMemoryInfo(
+                process_handle, ctypes.byref(counters), counters.cb
+            ):
+                raise ctypes.WinError()
+
+            rss_mb = round(counters.working_set_size / (1024 * 1024), 2)
+            total_ram_gb = round(memory.total_phys / (1024**3), 2)
+            available_ram_gb = round(memory.avail_phys / (1024**3), 2)
+            used_ram_gb = round((memory.total_phys - memory.avail_phys) / (1024**3), 2)
+            return {
+                "cpu_percent": cpu_percent,
+                "cpu_cores_physical": None,
+                "cpu_cores_logical": os.cpu_count(),
+                "total_ram_gb": total_ram_gb,
+                "available_ram_gb": available_ram_gb,
+                "used_ram_gb": used_ram_gb,
+                "ram_percent": memory.memory_load,
+                "process_rss_mb": rss_mb,
+                "headless_ram_savings_percent": None,
+                "headless_ram_savings_reason": "no controlled GUI-versus-headless baseline has been measured",
+                "sensor_source": "win32_api",
+                "sensor_available": True
+            }
+        except Exception as error:
+            return {
+                "cpu_percent": None,
+                "cpu_cores_physical": None,
+                "cpu_cores_logical": os.cpu_count(),
+                "total_ram_gb": None,
+                "available_ram_gb": None,
+                "used_ram_gb": None,
+                "ram_percent": None,
+                "process_rss_mb": None,
+                "headless_ram_savings_percent": None,
+                "sensor_source": "unavailable",
+                "sensor_available": False,
+                "sensor_error": str(error)
+            }
     return {
-        "cpu_percent": 12.5,
-        "cpu_cores_physical": os.cpu_count() or 8,
-        "cpu_cores_logical": os.cpu_count() or 16,
-        "total_ram_gb": 32.0,
-        "available_ram_gb": 18.5,
-        "used_ram_gb": 13.5,
-        "ram_percent": 42.2,
-        "process_rss_mb": 45.2,
-        "headless_ram_savings_percent": 90.6
+        "cpu_percent": None,
+        "cpu_cores_physical": None,
+        "cpu_cores_logical": os.cpu_count(),
+        "total_ram_gb": None,
+        "available_ram_gb": None,
+        "used_ram_gb": None,
+        "ram_percent": None,
+        "process_rss_mb": None,
+        "headless_ram_savings_percent": None,
+        "sensor_source": "unavailable",
+        "sensor_available": False
     }
 
 def query_catalog():
@@ -593,6 +664,8 @@ def query_auth_providers():
 
 def query_kanban_burndown_and_tasks():
     tasks = []
+    available = False
+    error = None
     status_counts = {"triage": 0, "todo": 0, "in_progress": 0, "review": 0, "done": 0, "blocked": 0}
     priority_counts = {"urgent": 0, "high": 0, "medium": 0, "low": 0}
 
@@ -602,6 +675,7 @@ def query_kanban_burndown_and_tasks():
             cur = conn.cursor()
             cur.execute("SELECT id, title, assignee, status, priority, created_at, started_at, completed_at FROM tasks;")
             rows = cur.fetchall()
+            available = True
             for r in rows:
                 tid, title, assignee, status, priority, cat, sat, comp = r
                 st = (status or "todo").lower()
@@ -617,31 +691,9 @@ def query_kanban_burndown_and_tasks():
                     "created_at": cat,
                     "completed_at": comp
                 })
-        except Exception:
-            pass
-
-    # If kanban.db has 0 tasks registered, seed default enterprise active sprint cards
-    if len(tasks) == 0:
-        default_cards = [
-            {"id": "TSK-001", "title": "Sovereign 60-Field Header Audit & Merkle DAG Anchoring", "assignee": "compliance-and-traceability-guard", "status": "done", "priority": "urgent", "progress": 100},
-            {"id": "TSK-002", "title": "Zero-Mock Enterprise Telemetry & Hardware Sensors Bridge", "assignee": "hermes-orchestrator", "status": "done", "priority": "high", "progress": 100},
-            {"id": "TSK-003", "title": "AST Code Refactoring & Pi Coding Harness Integration", "assignee": "pi-coding-agent", "status": "in_progress", "priority": "high", "progress": 85},
-            {"id": "TSK-004", "title": "Sentrux Aegis Continuous Architectural Security Sensor", "assignee": "sentrux-auditor", "status": "in_progress", "priority": "high", "progress": 70},
-            {"id": "TSK-005", "title": "HexStrike Red Team Vulnerability Sweep & Secret Leak Hunter", "assignee": "security-redteam-critic", "status": "review", "priority": "medium", "progress": 90},
-            {"id": "TSK-006", "title": "Librarian Knowledge Catalog Sync (46,210+ Resources)", "assignee": "agent-bibliotecario", "status": "done", "priority": "medium", "progress": 100},
-            {"id": "TSK-007", "title": "Kimi K3 in C Native Inference Verification on Laptop", "assignee": "hermes-orchestrator", "status": "done", "priority": "medium", "progress": 100},
-            {"id": "TSK-008", "title": "TUIOS Headless Control Engine & Visual Charts (Pie/Histograms)", "assignee": "pi-coding-agent", "status": "in_progress", "priority": "urgent", "progress": 95},
-            {"id": "TSK-009", "title": "Multi-Model Matrix Auto-Routing on Port 3033 (Hydra)", "assignee": "hermes-orchestrator", "status": "done", "priority": "high", "progress": 100},
-            {"id": "TSK-010", "title": "NIS2 7-Year Immutable Audit Trail Retention Policy", "assignee": "compliance-and-traceability-guard", "status": "done", "priority": "high", "progress": 100},
-            {"id": "TSK-011", "title": "136 Enterprise Agents Multi-Division Swarm Orchestration", "assignee": "hermes-orchestrator", "status": "done", "priority": "urgent", "progress": 100},
-            {"id": "TSK-012", "title": "Continuous Memory Consolidation & TencentDB Vector Sync", "assignee": "agent-bibliotecario", "status": "todo", "priority": "low", "progress": 0}
-        ]
-        tasks = default_cards
-        for c in default_cards:
-            st = c["status"]
-            status_counts[st] = status_counts.get(st, 0) + 1
-            pr = c["priority"]
-            priority_counts[pr] = priority_counts.get(pr, 0) + 1
+            conn.close()
+        except Exception as exc:
+            error = str(exc)
 
     total_tasks = len(tasks)
     done_tasks = status_counts.get("done", 0)
@@ -650,13 +702,16 @@ def query_kanban_burndown_and_tasks():
     todo_tasks = status_counts.get("todo", 0)
     blocked_tasks = status_counts.get("blocked", 0)
 
-    completion_rate_pct = round((done_tasks / max(1, total_tasks)) * 100, 1)
-    sprint_velocity_points = done_tasks * 8 + in_progress * 4 + review_tasks * 6
+    completion_rate_pct = round((done_tasks / total_tasks) * 100, 1) if total_tasks else None
 
     return {
+        "available": available,
+        "source": KANBAN_DB if os.path.exists(KANBAN_DB) else None,
+        "error": error,
         "total_tasks_count": total_tasks,
         "completion_rate_percent": completion_rate_pct,
-        "sprint_velocity_points": sprint_velocity_points,
+        "sprint_velocity_points": None,
+        "sprint_velocity_reason": "story points are not stored in kanban.db",
         "status_breakdown": {
             "DONE": done_tasks,
             "IN_PROGRESS": in_progress,
@@ -685,14 +740,17 @@ def query_technical_debt_metrics():
         "total_loc": 0,
         "comment_lines": 0,
         "blank_lines": 0,
-        "god_files_count": 0,
-        "god_files": [],
+        "large_files_over_500_count": 0,
+        "large_files_over_500": [],
         "htp_v5_compliant_files": 0,
         "non_compliant_files": 0,
-        "estimated_refactoring_hours": 0.0,
+        "estimated_refactoring_hours": None,
+        "estimated_refactoring_hours_reason": "requires measured task sizing; no heuristic estimate is emitted",
         "documentation_coverage_pct": 0.0,
-        "sovereign_compliance_pct": 0.0,
-        "technical_debt_tier": "LOW_HEALTHY"
+        "metadata_header_presence_pct": 0.0,
+        "sovereign_compliance_pct": None,
+        "technical_debt_tier": None,
+        "scan_scope": "bounded source-file sample; dependencies and generated output excluded"
     }
 
     sample_targets = []
@@ -701,12 +759,12 @@ def query_technical_debt_metrics():
     if os.path.exists(tools_dir):
         for item in os.listdir(tools_dir)[:30]:
             sub = os.path.join(tools_dir, item)
-            if os.path.isfile(sub) and sub.endswith(('.py', '.js', '.json', '.ts')):
+            if os.path.isfile(sub) and sub.endswith(('.py', '.js', '.cjs', '.mjs', '.ts', '.tsx')):
                 sample_targets.append(sub)
             elif os.path.isdir(sub):
                 for f in os.listdir(sub)[:5]:
                     fp = os.path.join(sub, f)
-                    if os.path.isfile(fp) and fp.endswith(('.py', '.js', '.ts', '.tsx', '.json', '.md')):
+                    if os.path.isfile(fp) and fp.endswith(('.py', '.js', '.cjs', '.mjs', '.ts', '.tsx')):
                         sample_targets.append(fp)
 
     # 2. Sample key mecha projects
@@ -717,13 +775,13 @@ def query_technical_debt_metrics():
             if os.path.isdir(sub):
                 for f in os.listdir(sub)[:4]:
                     fp = os.path.join(sub, f)
-                    if os.path.isfile(fp) and fp.endswith(('.py', '.js', '.ts', '.tsx', '.json', '.md')):
+                    if os.path.isfile(fp) and fp.endswith(('.py', '.js', '.cjs', '.mjs', '.ts', '.tsx')):
                         sample_targets.append(fp)
 
     # 3. Sample root scripts
     for f in os.listdir(HERMES_ROOT)[:20]:
         fp = os.path.join(HERMES_ROOT, f)
-        if os.path.isfile(fp) and fp.endswith(('.py', '.js', '.json', '.md')):
+        if os.path.isfile(fp) and fp.endswith(('.py', '.js', '.cjs', '.mjs', '.ts', '.tsx')):
             sample_targets.append(fp)
 
     for filepath in sample_targets[:100]:
@@ -734,17 +792,16 @@ def query_technical_debt_metrics():
                 debt["files_scanned"] += 1
                 debt["total_loc"] += loc
                 if loc > 500:
-                    debt["god_files_count"] += 1
-                    if len(debt["god_files"]) < 5:
-                        debt["god_files"].append({
+                    debt["large_files_over_500_count"] += 1
+                    if len(debt["large_files_over_500"]) < 5:
+                        debt["large_files_over_500"].append({
                             "file": os.path.relpath(filepath, HERMES_ROOT).replace(chr(92), "/"),
                             "lines": loc
                         })
                 has_header = False
-                for l in lines[:25]:
-                    if "@file_id" in l or "@merkle_root_hash" in l:
+                for l in lines:
+                    if "@file_id" in l:
                         has_header = True
-                        break
                     if l.strip().startswith("//") or l.strip().startswith("#") or l.strip().startswith("*"):
                         debt["comment_lines"] += 1
                     elif not l.strip():
@@ -758,19 +815,10 @@ def query_technical_debt_metrics():
             pass
 
     doc_ratio = round((debt["comment_lines"] / max(1, debt["total_loc"])) * 100, 1)
-    comp_ratio = round((debt["htp_v5_compliant_files"] / max(1, debt["files_scanned"])) * 100, 1)
-    refactor_hours = round(debt["god_files_count"] * 2.0 + (debt["non_compliant_files"] * 0.15), 1)
+    metadata_ratio = round((debt["htp_v5_compliant_files"] / max(1, debt["files_scanned"])) * 100, 1)
 
     debt["documentation_coverage_pct"] = doc_ratio
-    debt["sovereign_compliance_pct"] = comp_ratio
-    debt["estimated_refactoring_hours"] = refactor_hours
-
-    if refactor_hours < 20:
-        debt["technical_debt_tier"] = "LOW (A+ Grade Codebase)"
-    elif refactor_hours < 50:
-        debt["technical_debt_tier"] = "MODERATE (Managed Debt)"
-    else:
-        debt["technical_debt_tier"] = "ELEVATED (Refactoring Required)"
+    debt["metadata_header_presence_pct"] = metadata_ratio
 
     _TECH_DEBT_CACHE["timestamp"] = now
     _TECH_DEBT_CACHE["data"] = debt
@@ -825,7 +873,7 @@ def query_atomic_goals_telemetry():
 def query_immutable_ledger_telemetry():
     db_path = os.path.join(HERMES_ROOT, "tools", "swarm_goals", "immutable_execution_ledger.db")
     if not os.path.exists(db_path):
-        return {"total_executions_recorded": 0, "contract_adherence_rate_pct": 100.0, "recent_ledger_entries": []}
+        return {"available": False, "source": None, "total_executions_recorded": 0, "contract_adherence_rate_pct": None, "recent_ledger_entries": []}
     try:
         conn = sqlite3.connect(db_path)
         cur = conn.cursor()
@@ -836,6 +884,14 @@ def query_immutable_ledger_telemetry():
         match_breakdown = {}
         for row in cur.fetchall():
             match_breakdown[row[0]] = row[1]
+
+        cur.execute("""
+            SELECT
+                SUM(CASE WHEN ed25519_signature LIKE 'ED512-SIG-%' THEN 1 ELSE 0 END),
+                SUM(CASE WHEN ed25519_signature LIKE 'UNSIGNED-SHA512-TAG-%' THEN 1 ELSE 0 END)
+            FROM execution_ledger;
+        """)
+        signature_counts = cur.fetchone() or (0, 0)
             
         cur.execute("""
             SELECT entry_id, task_id, goal_id, project_id, phase_index, actor_agent_id, actor_role, model_id,
@@ -867,15 +923,23 @@ def query_immutable_ledger_telemetry():
             })
         conn.close()
         
-        adherence_rate = round((match_breakdown.get("PERFECT_MATCH", 0) / max(1, total_executions)) * 100, 1)
+        recorded_claim_rate = round((match_breakdown.get("PERFECT_MATCH", 0) / max(1, total_executions)) * 100, 1)
         return {
+            "available": True,
+            "source": db_path,
+            "cryptographic_verification_performed": False,
+            "signature_scheme": "none_verified",
+            "legacy_pseudo_signature_records": int(signature_counts[0] or 0),
+            "unsigned_integrity_tag_records": int(signature_counts[1] or 0),
             "total_executions_recorded": total_executions,
-            "contract_adherence_rate_pct": adherence_rate,
+            "contract_adherence_rate_pct": None,
+            "contract_adherence_reason": "legacy delivery_match_status values were not independently verified",
+            "recorded_perfect_match_claim_rate_pct": recorded_claim_rate,
             "delivery_match_breakdown": match_breakdown,
             "recent_ledger_entries": recent_entries
         }
     except Exception as e:
-        return {"total_executions_recorded": 0, "contract_adherence_rate_pct": 100.0, "recent_ledger_entries": [], "error": str(e)}
+        return {"available": False, "source": db_path, "total_executions_recorded": 0, "contract_adherence_rate_pct": None, "recent_ledger_entries": [], "error": str(e)}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 14. SOVEREIGN REQUIREMENTS ENGINE TELEMETRY (104+ REQUIREMENTS)
@@ -890,9 +954,9 @@ def query_sovereign_requirements_telemetry():
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
             return mod.get_requirements_telemetry()
-        except Exception:
-            pass
-    return {"total_requirements_count": 0, "compliance_rate_pct": 0.0, "phase_breakdown": []}
+        except Exception as exc:
+            return {"available": False, "source": reqs_script, "total_requirements_count": 0, "compliance_rate_pct": None, "phase_breakdown": [], "error": str(exc)}
+    return {"available": False, "source": None, "total_requirements_count": 0, "compliance_rate_pct": None, "phase_breakdown": [], "error": "requirements engine not found"}
 
 def query_live_swarm_job_telemetry():
     """Queries real-time telemetry from tools/swarm_goals/live_job_state.json."""
@@ -900,29 +964,42 @@ def query_live_swarm_job_telemetry():
     if os.path.exists(live_path):
         try:
             with open(live_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
+                data = json.load(f)
+            modified_at = datetime.fromtimestamp(os.path.getmtime(live_path), tz=timezone.utc)
+            age_seconds = max(0, int((datetime.now(timezone.utc) - modified_at).total_seconds()))
+            data["available"] = True
+            data["source"] = live_path
+            data["source_modified_at"] = modified_at.isoformat().replace("+00:00", "Z")
+            data["evidence_age_seconds"] = age_seconds
+            data["runtime_live"] = age_seconds <= 300
+            if not data["runtime_live"]:
+                data["recorded_status"] = data.get("status")
+                data["status"] = "STALE_RECORDED_STATE"
+                data["recorded_snapshot"] = {
+                    "goals_progress_pct": data.get("goals_progress_pct"),
+                    "time_progress_pct": data.get("time_progress_pct"),
+                    "current_cycle": data.get("current_cycle"),
+                    "current_target_project": data.get("current_target_project"),
+                    "current_active_agent": data.get("current_active_agent"),
+                    "current_model": data.get("current_model"),
+                    "log_records": len(data.get("live_agent_logs") or []),
+                    "warning": "Historical values are retained as an unverified snapshot, not live telemetry."
+                }
+                for key in (
+                    "elapsed_seconds", "remaining_seconds", "elapsed_formatted", "remaining_formatted",
+                    "time_progress_pct", "goals_progress_pct", "progress_pct", "performance_status",
+                    "current_cycle", "current_target_project", "current_active_agent",
+                    "current_active_role", "current_model"
+                ):
+                    data[key] = None
+                data["live_agent_logs"] = []
+            return data
+        except Exception as exc:
+            return {"available": False, "source": live_path, "error": str(exc), "live_agent_logs": []}
     return {
-        "job_id": "JOB-PENDING-START",
-        "status": "IDLE",
-        "duration_hours": 10.0,
-        "start_time_iso": datetime.utcnow().isoformat() + "Z",
-        "start_time_local": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-        "scheduled_end_time_iso": datetime.utcnow().isoformat() + "Z",
-        "scheduled_end_time_local": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
-        "elapsed_seconds": 0,
-        "remaining_seconds": 36000,
-        "elapsed_formatted": "0h 0m 0s",
-        "remaining_formatted": "10h 0m 0s",
-        "progress_pct": 0.0,
-        "current_cycle": 0,
-        "current_target_project": "N/A",
-        "current_active_agent": "hermes-orchestrator",
-        "current_active_role": "Supreme Swarm Coordinator",
-        "current_model": "proxima-chatgpt-5-6-sol",
-        "total_projects": 11,
-        "safety_lock": "SOVEREIGN_NON_DESTRUCTIVE_READ_ONLY",
+        "available": False,
+        "source": None,
+        "status": "NO_RUNTIME_EVIDENCE",
         "live_agent_logs": []
     }
 
@@ -933,14 +1010,25 @@ def query_swarm_jobs_telemetry():
         try:
             with open(jobs_path, "r", encoding="utf-8") as f:
                 jobs = json.load(f)
+                normalized_jobs = []
+                for job in jobs:
+                    normalized = dict(job)
+                    normalized["registry_status"] = job.get("status")
+                    normalized["status"] = "REGISTERED_ACTIVE" if job.get("status") == "active" else "REGISTERED"
+                    normalized["runtime_live"] = False
+                    normalized["source"] = jobs_path
+                    normalized_jobs.append(normalized)
                 return {
-                    "total_jobs_count": len(jobs),
-                    "active_jobs_count": len([j for j in jobs if j.get("status") == "active"]),
-                    "jobs": jobs
+                    "available": True,
+                    "source": jobs_path,
+                    "total_jobs_count": len(normalized_jobs),
+                    "active_jobs_count": 0,
+                    "declared_active_jobs_count": len([j for j in jobs if j.get("status") == "active"]),
+                    "jobs": normalized_jobs
                 }
         except Exception:
             pass
-    return {"total_jobs_count": 0, "active_jobs_count": 0, "jobs": []}
+    return {"available": False, "source": jobs_path if os.path.exists(jobs_path) else None, "total_jobs_count": 0, "active_jobs_count": 0, "declared_active_jobs_count": 0, "jobs": []}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN AGGREGATOR
@@ -957,7 +1045,7 @@ def gather_full_real_metrics():
     catalog_totals = query_catalog()
     auth_providers = query_auth_providers()
     hw = query_system_hardware()
-    agents_data = extract_all_130_agents()
+    agents_data = extract_registered_agent_personas()
     compliance = query_traceability_compliance()
     kanban_data = query_kanban_burndown_and_tasks()
     tech_debt = query_technical_debt_metrics()
@@ -968,7 +1056,7 @@ def gather_full_real_metrics():
     swarm_jobs = query_swarm_jobs_telemetry()
 
     return {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "database": {
             "state_db": state_metrics,
             "projects_count": len(projects),

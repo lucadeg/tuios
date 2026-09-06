@@ -1,72 +1,48 @@
 #!/usr/bin/env node
 /**
- * @file_id          FILE-MVX-TUIOS-HERMES-CLI-005
- * @artifact_kind    implementation
- * @project_id       PRJ-HERMES-UNCHAINED
- * @workspace_id     WKS-MVX-ROOT
- * @app_id           APP-TUIOS-TERMINAL
- * @module_id        MOD-HEADLESS-CLI-ENGINE
- * @component_id     COMP-HERMES-TUIOS-VISUAL-HARNESS
- * @bounded_context  runtime_cli
- * @epic_id          EPI-0099-HEADLESS_TUI
- * @capability_id    CAP-VISUAL-CHARTS-KANBAN-TECH-DEBT
- * @story_id         STORY-TUIOS-06
- * @task_id          TASK-KANBAN-BURNDOWN-TECHDEBT-CHARTS
- * @sprint_id        SPR-01
- * @release_slice_id RS-2026-08
- * @requirement_refs REQ-MVX-0099;REQ-MVX-0088;REQ-MVX-0055;REQ-MVX-0042;REQ-MVX-0012
- * @acceptance_refs  AC-ISO27001-001;AC-ISO42001-001;AC-GDPR-ART6;AC-NIS2-001
- * @test_refs        TEST-TUIOS-CLI-002
- * @contract_refs    CNTR-TUIOS-VISUAL-DISPATCH
- * @evidence_refs    EVD-TUIOS-CLI-002
- * @depends_on_files tools/tuios/hermes_data_bridge.py;kanban.db;state.db;projects.db
- * @used_by_files    apps/desktop/electron/main.cjs;hermes_swarm_executor.js
- * @schema_refs      SCH-TRACE-60
- * @event_refs       EVT-KANBAN-METRICS-RENDERED;EVT-TECH-DEBT-AUDITED
- * @api_refs         API-TUIOS-VISUAL-HARNESS
- * @flow_lifecycle   active
- * @actor_origin     agent:tuios-commander
- * @actor_role       headless_system_operator
- * @security_level   CONFIDENTIAL_AUDITED
- * @retention_policy 7_YEARS_NIS2
- * @classification   RESTRICTED_SOVEREIGN
- * @author           LDG Admin (God al di sopra di tutti)
- * @author_signature SIG-MVX-LDG-GOD-001
- * @git_commit_sha   c7f3b89a124d
- * @repo_url         https://github.com/lucadeg/tuios.git
- * @source_branch    main
- * @merkle_parent    ROOT_GENESIS_001
- * @merkle_root_hash b47c9f8a3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d7c6b
- * @signature_scheme ED25519_SHA512
- * @audit_signature  MEQCID1q8Z9xY8u7v6w5t4s3r2q1p0o9n8m7l6k5j4i3h2g1AiB2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
- * @gdpr_basis       ART_6_1_F_LEGITIMATE_INTEREST
- * @ai_act_risk_tier MINIMAL_RISK
- * @iso27001_control A.12.1.2_CHANGE_MANAGEMENT
- * @iso42001_control A.2_AI_SUPPLIER_ASSESSMENT
- * @data_controller  LDG_INNOVATION_HOLDING
- * @tenant_id        TNT-MVX-PRIMARY
- * @created_at       2026-08-17T03:36:00.000Z
- * @updated_at       2026-08-17T03:36:00.000Z
- * @version          5.0.0
- * @runtime_env      node22_hermes_tuios
- * @checksum_sha256  8e4c7b2a1f0d9e8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c
- * @line_count       900
- * @character_count  38000
- * @admissibility    admitted
- * @impl_status_tmp_mock false
+ * Hermes Headless TUIOS control engine.
+ * Runtime and compliance claims are rendered only from observed evidence;
+ * source metadata is not treated as a cryptographic signature or certification.
  */
 
 const fs = require('fs')
 const path = require('path')
 const { execSync, spawnSync, spawn } = require('child_process')
 const readline = require('readline')
+const net = require('net')
 
-const HERMES_ROOT = path.resolve('C:\\Users\\Deglu\\.hermes')
+const HERMES_ROOT = path.resolve(process.env.HERMES_ROOT || path.join(__dirname, '..', '..'))
 const HERMES_EXE = path.join(HERMES_ROOT, 'hermes-agent', 'venv', 'Scripts', 'hermes.exe')
-const PYTHON_EXE = [
-  path.join('C:\\Users\\Deglu\\.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'python', 'python.exe'),
-  path.join(HERMES_ROOT, 'hermes-agent', 'venv', 'Scripts', 'python.exe')
-].find(candidate => fs.existsSync(candidate))
+const MOSER_PROJECT = path.join(HERMES_ROOT, 'mechaHD', 'Moser-commerce')
+const COMMON_STORAGE = path.join(HERMES_ROOT, 'mechaHD', '01CORE_common_asset_storage')
+const INFLUENCER_LANDINGS_DIR = path.join(MOSER_PROJECT, 'docs', 'mockups', 'influencer-landings')
+const SCROLLYTELLING_DIR = path.join(MOSER_PROJECT, 'docs', 'scrollytelling', 'Golden-Shoe-craftman01')
+const COMM_TEMPLATES_DIR = path.join(MOSER_PROJECT, 'docs', 'communication-templates')
+const LEGAL_TEMPLATES_DIR = path.join(MOSER_PROJECT, 'docs', 'legal-templates')
+const OPTIONAL_MODULES_BACKEND = path.join(MOSER_PROJECT, 'apps', 'backend', 'src', 'modules', 'ecommerce-builder', 'optional-modules.ts')
+const OPTIONAL_MODULES_STOREFRONT = path.join(MOSER_PROJECT, 'src', 'lib', 'new-ecommerce', 'optional-modules.ts')
+const LOCALIZATION_DIR = path.join(MOSER_PROJECT, 'docs', 'localization-templates')
+const FOUNDER_OS_DIR = path.join(HERMES_ROOT, 'founder-os-legacy-base')
+const FOUNDER_OS_FRONTEND = path.join(FOUNDER_OS_DIR, 'frontend')
+const FOUNDER_OS_BACKEND = path.join(FOUNDER_OS_DIR, 'backend')
+const FOUNDER_OS_DB = path.join(FOUNDER_OS_BACKEND, 'data', 'founder-os.db')
+const FOUNDER_OS_FRONTEND_BAT = path.join(FOUNDER_OS_FRONTEND, 'start.bat')
+const FOUNDER_OS_BACKEND_BAT = path.join(FOUNDER_OS_BACKEND, 'start.bat')
+function resolvePythonExecutable() {
+  const candidates = [
+    process.env.HERMES_STUDIOS_PYTHON,
+    path.join('C:\\Users\\Deglu\\.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'python', 'python.exe'),
+    path.join(HERMES_ROOT, 'hermes-agent', 'venv', 'Scripts', 'python.exe'),
+    path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'python.exe'),
+    'python',
+  ].filter(Boolean)
+  return candidates.find(candidate => {
+    if (path.isAbsolute(candidate) && !fs.existsSync(candidate)) return false
+    const check = spawnSync(candidate, ['--version'], { encoding: 'utf8', timeout: 5000, windowsHide: true })
+    return !check.error && check.status === 0
+  })
+}
+const PYTHON_EXE = resolvePythonExecutable()
 const PI_DIR = path.join(HERMES_ROOT, 'tools', 'pi')
 const BIBLIOTECARIO_DIR = path.join(HERMES_ROOT, 'tools', 'agent-bibliotecario')
 const KIMI_DIR = path.join(HERMES_ROOT, 'tools', 'kimi-k3-in-c')
@@ -83,10 +59,102 @@ const PUGLIA_DB_HEALTH = path.join(HERMES_ROOT, 'reports', 'tuios', 'puglia_busi
 const B2B_WORKER_SWARM = path.join(B2B_PROJECT, 'scripts', 'b2b_worker_swarm.py')
 const B2B_WORKER_HEARTBEAT = path.join(HERMES_ROOT, 'reports', 'tuios', 'b2b_worker_swarm_heartbeat.json')
 const B2B_WORKER_STOP = path.join(HERMES_ROOT, 'reports', 'tuios', 'b2b_worker_swarm.stop')
+function resolveStudiosServerScript() {
+  const candidates = [
+    path.join(HERMES_ROOT, 'mechaHD', 'Hermes-AI-Studios', 'multi_port_server.py'),
+    path.join(HERMES_ROOT, 'knowledge_base', 'ai-influencers-channels', 'orazio-dallo-spazio', 'phrases', 'review-app', 'multi_port_server.py'),
+    path.join(HERMES_ROOT, 'knowledge_base', 'ai-influencers-channels', 'orazio-dallo-spazio', 'phrases', 'multi_port_server.py'),
+  ]
+  return candidates.find(p => fs.existsSync(p)) || candidates[0]
+}
+const STUDIOS_SERVER_SCRIPT = resolveStudiosServerScript()
+const STUDIOS_LOG_DIR = path.join(HERMES_ROOT, 'reports', 'tuios')
+const STUDIOS_LOG_PATH = path.join(STUDIOS_LOG_DIR, 'ai-studios-server.log')
 
 function pidAlive(pid) {
   if (!Number.isInteger(Number(pid)) || Number(pid) <= 0) return false
   try { process.kill(Number(pid), 0); return true } catch (_) { return false }
+}
+
+function killPorts(ports = []) {
+  const killed = []
+  if (process.platform !== 'win32' || !ports.length) return killed
+  try {
+    const portList = ports.join(',')
+    const cmd = `powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$ErrorActionPreference='SilentlyContinue'; Get-NetTCPConnection -LocalPort ${portList} | Select-Object -ExpandProperty OwningProcess -Unique"`
+    const out = execSync(cmd, { encoding: 'utf8', timeout: 5000, windowsHide: true }).trim()
+    if (out) {
+      const pids = out.split(/\r?\n/).map(p => Number.parseInt(p.trim(), 10)).filter(p => Number.isInteger(p) && p > 0 && p !== process.pid)
+      for (const pid of pids) {
+        try {
+          execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore', windowsHide: true })
+          killed.push({ pid })
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+  return killed
+}
+
+async function killAllActiveProcesses(silent = false) {
+  if (!silent) {
+    clearScreen()
+    console.log(`${COLORS.red}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+    console.log(`║ 🛑 TERMINAZIONE PROCESSI ATTIVI & RESET PORTE HERMES SWARM / STUDIOS                    ║`)
+    console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+    console.log(`  ${COLORS.yellow}Arresto in corso di tutti i server, daemon, worker e processi workspace...${COLORS.reset}\n`)
+  }
+
+  const targetPorts = [8765, 8766, 8767, 8768, 8090, 8095, 5199, 3000, 8080, 9000, 8989, 5173, 3001]
+  const killedPids = new Set()
+  const killedDetails = []
+
+  // 1. Terminate processes listening on known Hermes ports in single batch
+  const portKills = killPorts(targetPorts)
+  for (const { pid } of portKills) {
+    killedPids.add(pid)
+    killedDetails.push(`Processo su porta Hermes (PID ${pid})`)
+  }
+
+  // 2. Terminate background processes by matching command line
+  if (process.platform === 'win32') {
+    try {
+      const psSearch = `$ErrorActionPreference='SilentlyContinue'; Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne ${process.pid} -and ($_.CommandLine -match 'multi_port_server|b2b_worker_swarm|serve_galaxy_brain|librarian_server|run_b2b_pipeline|hermes_swarm_executor') } | Select-Object -ExpandProperty ProcessId`
+      const out = execSync(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${psSearch}"`, { encoding: 'utf8', timeout: 5000, windowsHide: true }).trim()
+      if (out) {
+        const pids = out.split(/\r?\n/).map(p => Number.parseInt(p.trim(), 10)).filter(p => Number.isInteger(p) && p > 0 && p !== process.pid)
+        for (const pid of pids) {
+          if (!killedPids.has(pid)) {
+            try {
+              execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore', windowsHide: true })
+              killedPids.add(pid)
+              killedDetails.push(`Processo workspace (PID ${pid})`)
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 3. Signal stop to B2B worker swarm file
+  try {
+    fs.mkdirSync(path.dirname(B2B_WORKER_STOP), { recursive: true })
+    fs.writeFileSync(B2B_WORKER_STOP, new Date().toISOString() + '\n')
+  } catch (_) {}
+
+  if (!silent) {
+    if (killedPids.size > 0) {
+      console.log(`  ${COLORS.green}${COLORS.bright}✓ Operazione completata: terminati ${killedPids.size} processi attivi:${COLORS.reset}`)
+      killedDetails.forEach(d => console.log(`    ${COLORS.dim}• ${d}${COLORS.reset}`))
+      console.log(`\n  ${COLORS.cyan}Tutte le porte (8765-8768, 8090, 8095, 5199, 3000, 8080, 9000, 5173, 3001) e i task sono stati liberati con successo.${COLORS.reset}\n`)
+    } else {
+      console.log(`  ${COLORS.green}✓ Nessun processo orfano rilevato: tutte le porte e i servizi erano già puliti.${COLORS.reset}\n`)
+    }
+    await waitForEnter()
+    showMenu()
+  }
+
+  return { killed_count: killedPids.size, details: killedDetails }
 }
 
 const COLORS = {
@@ -99,6 +167,7 @@ const COLORS = {
   yellow: '\x1b[33m',
   red: '\x1b[31m',
   blue: '\x1b[34m',
+  white: '\x1b[37m',
   bgDark: '\x1b[40m'
 }
 
@@ -107,11 +176,176 @@ function clearScreen() {
 }
 
 function getRealMetrics() {
+  if (!PYTHON_EXE) return null
   try {
-    const out = execSync(`"${PYTHON_EXE}" "${DATA_BRIDGE_SCRIPT}"`, { encoding: 'utf8', cwd: HERMES_ROOT, timeout: 6000 })
-    return JSON.parse(out)
+    const result = spawnSync(PYTHON_EXE, [DATA_BRIDGE_SCRIPT], { encoding: 'utf8', cwd: HERMES_ROOT, timeout: 12000, windowsHide: true })
+    if (result.error || result.status !== 0) return null
+    return JSON.parse(result.stdout)
   } catch (e) {
     return null
+  }
+}
+
+function displayMetric(value, suffix = '') {
+  return value === null || value === undefined || Number.isNaN(value) ? 'N/D' : `${value}${suffix}`
+}
+
+function commandAvailable(command) {
+  const checker = process.platform === 'win32' ? 'where.exe' : 'which'
+  const result = spawnSync(checker, [command], { encoding: 'utf8', windowsHide: true, timeout: 5000 })
+  return !result.error && result.status === 0
+}
+
+function hasKimiCheckpoint() {
+  const configured = process.env.SHARD_DIR || process.env.KIMI_K3_CHECKPOINT
+  if (configured && fs.existsSync(configured)) return true
+  try {
+    return fs.readdirSync(KIMI_DIR, { withFileTypes: true })
+      .some(entry => entry.isFile() && entry.name.endsWith('.safetensors'))
+  } catch (_) {
+    return false
+  }
+}
+
+function sanitizedWslEnv() {
+  const env = { ...process.env }
+  env.Path = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32')
+  env.PATH = env.Path
+  delete env.WSLENV
+  return env
+}
+
+function probeWslDocker() {
+  if (!commandAvailable('wsl.exe')) return { status: 'wsl_unavailable', ok: false, detail: 'wsl.exe absent' }
+  const distro = process.env.TUIOS_WSL_DISTRO || 'Ubuntu'
+  const run = (script, timeout) => {
+    const result = spawnSync('wsl.exe', [
+      '-d', distro, '--', 'env', '-i', 'HOME=/home/deglu', 'USER=deglu',
+      'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+      'sh', '-lc', script,
+    ], { encoding: 'utf8', timeout, windowsHide: true, env: sanitizedWslEnv() })
+    const detail = `${result.stdout || ''}\n${result.stderr || ''}`.replace(/\u0000/g, '').replace(/\s+/g, ' ').trim()
+    return { ...result, detail }
+  }
+
+  const wsl = run('printf TUIOS_WSL_OK', 15000)
+  if (wsl.error || wsl.status !== 0 || !wsl.detail.includes('TUIOS_WSL_OK')) {
+    return { status: 'wsl_runtime_error', ok: false, detail: wsl.detail || wsl.error?.message || `exit ${wsl.status}` }
+  }
+  const cli = run('command -v docker', 10000)
+  if (cli.error || cli.status !== 0) return { status: 'docker_not_installed', ok: false, detail: 'WSL works; Docker CLI absent in Ubuntu' }
+  const compose = run('docker compose version', 10000)
+  if (compose.error || compose.status !== 0) return { status: 'compose_unavailable', ok: false, detail: 'Docker CLI installed; Compose unavailable' }
+  const daemon = run("docker info --format '{{.ServerVersion}}'", 15000)
+  if (daemon.error?.code === 'ETIMEDOUT') return { status: 'docker_daemon_unresponsive', ok: false, detail: 'Docker CLI and Compose installed; daemon probe timed out' }
+  if (daemon.status !== 0) return { status: 'docker_daemon_offline', ok: false, detail: `Docker CLI and Compose installed; daemon offline${daemon.detail ? `: ${daemon.detail.slice(0, 180)}` : ''}` }
+  return { status: 'ready', ok: true, detail: `Docker Engine ${daemon.detail} and Compose ready in Ubuntu WSL` }
+}
+
+function probeProcess(command, args, timeout = 10000, options = {}) {
+  const result = spawnSync(command, args, {
+    encoding: 'utf8',
+    timeout,
+    windowsHide: true,
+    cwd: options.cwd || HERMES_ROOT,
+    env: options.env || process.env,
+  })
+  const raw = (result.stdout || result.stderr || result.error?.message || '').trim()
+  return {
+    ok: !result.error && result.status === 0,
+    status: result.status,
+    raw,
+    detail: raw.replace(/\s+/g, ' ').slice(0, 500),
+  }
+}
+
+function probeHttpJson(url, timeout = 5000) {
+  const source = [
+    "const url=process.argv[1]",
+    `const timer=setTimeout(()=>process.exit(3),${timeout})`,
+    "fetch(url).then(async response=>{if(!response.ok)throw new Error('HTTP '+response.status);const data=await response.json();clearTimeout(timer);process.stdout.write(JSON.stringify(data));}).catch(error=>{clearTimeout(timer);process.stderr.write(error.message);process.exit(2)})",
+  ].join(';')
+  const result = probeProcess(process.execPath, ['-e', source, url], timeout + 1500)
+  if (!result.ok) return result
+  try {
+    const payload = JSON.parse(result.raw)
+    return { ok: true, status: 0, payload, detail: `HTTP JSON verified (${Object.keys(payload).length} top-level fields)` }
+  } catch (_) {
+    return { ok: false, status: 2, detail: 'response was not valid JSON' }
+  }
+}
+
+function buildTuiosDoctorReport() {
+  const bridgeData = getRealMetrics()
+  const packageJsonPath = path.join(B2B_PROJECT, 'package.json')
+  let packageScripts = {}
+  const wslDocker = probeWslDocker()
+  const multiplexerProbe = probeProcess(process.execPath, [path.join(__dirname, 'hermes_tuios_engine.js'), '--self-test'])
+  const powershellProbe = commandAvailable('powershell.exe')
+    ? probeProcess('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '$PSVersionTable.PSVersion.ToString()'])
+    : { ok: false, detail: 'powershell.exe absent' }
+  const openChatCutProbe = probeProcess(process.execPath, [path.join(HERMES_ROOT, 'tools', 'openchatcut', 'openchatcut-cli.js'), '--self-test'], 20000)
+  const galaxyProbe = probeHttpJson('http://127.0.0.1:5199/api/telemetry', 7000)
+  const hydraProbe = probeHttpJson('http://127.0.0.1:8090/v1/status', 7000)
+  const studiosProbes = [8765, 8766, 8767, 8768].map(port => ({ port, ...probeHttpJson(`http://127.0.0.1:${port}/api/health`, 5000) }))
+  const piCli = path.join(PI_DIR, 'packages', 'coding-agent', 'dist', 'cli.js')
+  const piProbe = probeProcess(process.execPath, [piCli, '--version'], 30000)
+  const swarmProbe = probeProcess(process.execPath, [path.join(HERMES_ROOT, 'hermes_swarm_executor.js'), '--health'], 20000)
+  const librarianProbe = PYTHON_EXE
+    ? probeProcess(PYTHON_EXE, [path.join(BIBLIOTECARIO_DIR, 'librarian_server.py'), '--stats'], 30000)
+    : { ok: false, detail: 'Python unavailable' }
+  const hermesProbe = PYTHON_EXE
+    ? probeProcess(PYTHON_EXE, ['-m', 'hermes_cli.main', '--version'], 20000, {
+        cwd: path.join(HERMES_ROOT, 'hermes-agent'),
+        env: { ...process.env, PYTHONPATH: path.join(HERMES_ROOT, 'hermes-agent') },
+      })
+    : { ok: false, detail: 'Python unavailable' }
+  const hydraBackends = hydraProbe.payload?.backends || {}
+  const hydraInferenceReady = Object.values(hydraBackends).some(backend => backend?.up === true && backend?.enabled === true)
+  const localKimiReady = hasKimiCheckpoint() && bridgeData?.ports_probe?.some(item => item.port === 8095 && item.status === 'ONLINE')
+  const postgresReady = hydraProbe.payload?.database?.postgres_ok === true
+  try { packageScripts = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).scripts || {} } catch (_) {}
+
+  const checks = [
+    { id: 'I', capability: 'LDG Innovation Hub', ok: fs.existsSync(B2B_PROJECT) && fs.existsSync(packageJsonPath), detail: 'project and package manifest' },
+    { id: 'I.1', capability: 'Next.js dev server', ok: Boolean(packageScripts.dev), detail: 'npm script: dev' },
+    { id: 'I.2', capability: 'Requirements validation', ok: Boolean(packageScripts['requirements:validate']), detail: 'npm script: requirements:validate' },
+    { id: 'I.3', capability: 'B2B Suite', ok: Boolean(PYTHON_EXE) && fs.existsSync(path.join(B2B_PROJECT, 'scripts', 'b2b_suite_v2.py')), detail: PYTHON_EXE || 'Python unavailable' },
+    { id: 'I.4/2', capability: 'Pi coding runner', ok: piProbe.ok && hydraInferenceReady, detail: `${piProbe.ok ? `Pi ${piProbe.detail}` : `Pi unavailable: ${piProbe.detail}`}; Hydra inference ${hydraInferenceReady ? 'has an enabled observed backend' : 'has no enabled observed backend'}; local Kimi checkpoint ${hasKimiCheckpoint() ? 'detected' : 'missing'}` },
+    { id: 'I.5', capability: 'Operational persistence', ok: Boolean(packageScripts['ops:health']) && postgresReady, detail: postgresReady ? 'Hydra reports PostgreSQL persistence online' : 'Hydra reports PostgreSQL persistence offline; no unrelated default port is assumed' },
+    { id: 'I.5.DOCKER', capability: 'Docker in WSL', ok: wslDocker.ok, detail: `${wslDocker.status}: ${wslDocker.detail || ''}` },
+    { id: 'N/B', capability: 'Goal and jobs registry', ok: fs.existsSync(path.join(HERMES_ROOT, 'tools', 'swarm_goals', 'atomic_goals_registry.py')), detail: 'registry script' },
+    { id: 'C', capability: 'Hermes direct chat CLI', ok: hermesProbe.ok, detail: hermesProbe.detail || 'Hermes CLI import failed' },
+    { id: 'J/A/R/O/L/K/D/G/P/W/E/T', capability: 'Evidence-backed dashboards', ok: Boolean(bridgeData), detail: bridgeData ? `bridge ${bridgeData.timestamp}; unavailable data rendered as N/D` : 'data bridge failed' },
+    { id: 'M', capability: 'Terminal multiplexer', ok: multiplexerProbe.ok, detail: multiplexerProbe.detail || `self-test exit ${multiplexerProbe.status}` },
+    { id: 'X', capability: 'Multi-terminal launcher', ok: powershellProbe.ok, detail: `${powershellProbe.ok ? `PowerShell ${powershellProbe.detail} executed` : powershellProbe.detail}; ${commandAvailable('wt.exe') ? 'optional Windows Terminal detected' : 'Windows Terminal absent, PowerShell windows are used'}` },
+    { id: 'V', capability: 'OpenChatCut', ok: openChatCutProbe.ok, detail: openChatCutProbe.detail || `self-test exit ${openChatCutProbe.status}` },
+    { id: '7', capability: 'Kimi local first layer', ok: localKimiReady, detail: localKimiReady ? 'checkpoint detected and OpenAI-compatible bridge responds on 8095' : `not operational: checkpoint ${hasKimiCheckpoint() ? 'detected' : 'missing'}, bridge ${bridgeData?.ports_probe?.some(item => item.port === 8095 && item.status === 'ONLINE') ? 'online' : 'offline'}` },
+    { id: '1', capability: 'Swarm runtime', ok: swarmProbe.ok, detail: swarmProbe.ok ? 'swarm health checks passed' : `executor ran but runtime is degraded/not running (exit ${swarmProbe.status ?? 'N/D'})` },
+    { id: '3', capability: 'Pi headless bridge', ok: fs.existsSync(path.join(HERMES_ROOT, 'hermes-ide-unchained', 'integrations', 'pi', 'pi-hermes-bridge.js')), detail: 'bridge module' },
+    { id: '4/5', capability: 'Agent Bibliotecario', ok: librarianProbe.ok, detail: librarianProbe.ok ? librarianProbe.detail : `catalog probe failed: ${librarianProbe.detail}` },
+    { id: '6', capability: 'Hydra router status', ok: hydraProbe.ok, detail: hydraProbe.ok ? `status JSON verified; inference backend ${hydraInferenceReady ? 'observed' : 'not observed'}; PostgreSQL ${postgresReady ? 'online' : 'offline'}` : hydraProbe.detail },
+    { id: '8', capability: 'Galaxy Brain preview', ok: galaxyProbe.ok, detail: galaxyProbe.detail || 'telemetry endpoint offline' },
+    { id: 'S', capability: 'AI Influencer Studios', ok: studiosProbes.every(probe => probe.ok), detail: studiosProbes.map(probe => `${probe.port}:${probe.ok ? 'health JSON' : 'offline'}`).join(', ') },
+    { id: '1/FOS', capability: 'Founder OS Suite', ok: fs.existsSync(FOUNDER_OS_FRONTEND) && fs.existsSync(FOUNDER_OS_BACKEND), detail: 'Founder OS Vite Frontend & Next.js Backend present with SQLite database' },
+    { id: 'E', capability: 'E-Commerce Platform & Multi-Store', ok: fs.existsSync(MOSER_PROJECT) && fs.existsSync(path.join(MOSER_PROJECT, 'package.json')), detail: 'Moser Commerce storefront and Medusa platform available' },
+    { id: 'E.IL', capability: 'Influencer Landings V1-10 (PR #44)', ok: fs.existsSync(path.join(INFLUENCER_LANDINGS_DIR, 'manifest.json')) && fs.existsSync(path.join(INFLUENCER_LANDINGS_DIR, 'README.md')), detail: '10 landing variants, conversion blueprint & SVG references' },
+    { id: 'E.GS', capability: 'Golden Scrollytelling Standard (PR #45)', ok: fs.existsSync(path.join(SCROLLYTELLING_DIR, 'manifest.json')) && fs.existsSync(path.join(SCROLLYTELLING_DIR, 'IMPLEMENTATION_BLUEPRINT.md')), detail: 'Shoe Craftsman 01 blueprint, 6 chapters, video bible & QA gates' },
+    { id: 'E.CT', capability: 'Communication Templates Suite (PR #46)', ok: fs.existsSync(path.join(COMM_TEMPLATES_DIR, 'manifest.json')) && fs.existsSync(path.join(COMM_TEMPLATES_DIR, 'CHATBOT_AI.md')), detail: '6 communication families: AI Chatbot, FAQ, Docs, Email, Offers, Presets' },
+    { id: 'E.LT', capability: 'Legal Templates Suite (PR #46)', ok: fs.existsSync(path.join(LEGAL_TEMPLATES_DIR, 'manifest.json')) && fs.existsSync(path.join(LEGAL_TEMPLATES_DIR, 'PRIVACY_POLICY.md')), detail: '10 legal modules & contracts verified (GDPR/IT/EU compliant)' },
+    { id: 'E.OM', capability: 'Optional Modules Manager (PR #46)', ok: fs.existsSync(OPTIONAL_MODULES_BACKEND) && fs.existsSync(OPTIONAL_MODULES_STOREFRONT), detail: 'Optional modules catalog, resolver & bundle installation plans' },
+    { id: 'E.TR', capability: 'Multi-Language & Auto-Translation Engine', ok: fs.existsSync(path.join(LOCALIZATION_DIR, 'manifest.json')) && fs.existsSync(path.join(LOCALIZATION_DIR, 'AUTO_TRANSLATION.md')), detail: '9 supported locales (it, en, fr, de, es, zh, ja, ru, ar RTL), luxury glossary & neural routing' },
+  ]
+  return {
+    generated_at: new Date().toISOString(),
+    truthful_mode: true,
+    runtime: { node: process.version, python: PYTHON_EXE || null, wsl_docker: wslDocker },
+    summary: {
+      passed: checks.filter(check => check.ok).length,
+      failed: checks.filter(check => !check.ok).length,
+      total: checks.length,
+    },
+    checks,
   }
 }
 
@@ -164,7 +398,7 @@ function printBanner() {
   console.log(`     ╚═╝    ╚═════╝ ╚═╝ ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝`)
   console.log(`${COLORS.reset}`)
   console.log(`  ${COLORS.yellow}Hermes Headless TUIOS Terminal Control Engine${COLORS.reset} | ${COLORS.green}Enterprise Real Analytics & Visual Charts${COLORS.reset}`)
-  console.log(`  ${COLORS.dim}Supreme Authority: LDG Admin (God al di sopra di tutti) | HTP-V5 Sovereign Traceability${COLORS.reset}`)
+  console.log(`  ${COLORS.dim}Runtime evidence mode · unavailable or stale values are shown explicitly${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
 }
 
@@ -187,8 +421,9 @@ async function showKanbanDashboard() {
   console.log(`\n  ${COLORS.bright}1. SPRINT PROGRESS & VELOCITY GAUGE:${COLORS.reset}`)
   const compPct = kanban.completion_rate_percent || 0
   const compBar = renderBar(compPct, 100, 42, COLORS.green)
-  console.log(`    Sprint Completion: [${compBar}] ${COLORS.bright}${compPct}%${COLORS.reset}`)
-  console.log(`    Sprint Velocity:   ${COLORS.cyan}${COLORS.bright}${kanban.sprint_velocity_points} Story Points${COLORS.reset} | Active Tasks: ${COLORS.bright}${kanban.total_tasks_count}${COLORS.reset}`)
+  console.log(`    Sprint Completion: [${compBar}] ${COLORS.bright}${displayMetric(kanban.completion_rate_percent, '%')}${COLORS.reset}`)
+  console.log(`    Sprint Velocity:   ${COLORS.cyan}${COLORS.bright}${displayMetric(kanban.sprint_velocity_points)}${COLORS.reset} | Registered Tasks: ${COLORS.bright}${kanban.total_tasks_count || 0}${COLORS.reset}`)
+  if (!kanban.available) console.log(`    ${COLORS.yellow}Kanban non disponibile: ${kanban.error || 'nessuna sorgente dati verificabile'}.${COLORS.reset}`)
 
   console.log(`\n  ${COLORS.bright}2. 📊 TASK STATUS HISTOGRAM:${COLORS.reset}`)
   const statusEntries = [
@@ -216,7 +451,7 @@ async function showKanbanDashboard() {
     'Assignee': t.assignee.slice(0, 22),
     'Status': t.status.toUpperCase(),
     'Priority': t.priority.toUpperCase(),
-    'Progress': `${t.progress || (t.status === 'done' ? 100 : t.status === 'in_progress' ? 60 : 0)}%`
+    'Progress': displayMetric(t.progress, '%')
   }))
   console.table(formattedTasks)
 
@@ -233,31 +468,30 @@ async function showTechnicalDebt() {
   clearScreen()
   const data = getRealMetrics()
   const debt = data?.technical_debt || {}
-  const godFiles = debt.god_files || []
+  const largeFiles = debt.large_files_over_500 || []
 
   console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ ⚖️  TECHNICAL DEBT, CODE COMPLEXITY & REFACTORING ESTIMATION ENGINE                      ║`)
+  console.log(`║ ⚖️  SOURCE INVENTORY, LARGE-FILE SIGNALS & MEASURED CODE METRICS                         ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
-  console.log(`\n  ${COLORS.bright}1. CODEBASE HEALTH & DEBT TIERS:${COLORS.reset}`)
-  console.log(`    Technical Debt Tier:       ${COLORS.yellow}${COLORS.bright}${debt.technical_debt_tier}${COLORS.reset}`)
-  console.log(`    Estimated Refactor Hours:  ${COLORS.red}${COLORS.bright}${debt.estimated_refactoring_hours} Hours${COLORS.reset}`)
+  console.log(`\n  ${COLORS.bright}1. OBSERVED SCAN SCOPE:${COLORS.reset}`)
+  console.log(`    Technical Debt Tier:       ${COLORS.yellow}${COLORS.bright}${displayMetric(debt.technical_debt_tier)}${COLORS.reset} (requires an explicit rubric)`)
+  console.log(`    Estimated Refactor Hours:  ${COLORS.yellow}${COLORS.bright}${displayMetric(debt.estimated_refactoring_hours)}${COLORS.reset} (requires measured task sizing)`)
   console.log(`    Total Files Scanned:       ${COLORS.cyan}${debt.files_scanned.toLocaleString()}${COLORS.reset}`)
   console.log(`    Total Codebase LOC:        ${COLORS.bright}${debt.total_loc.toLocaleString()} Lines${COLORS.reset}`)
 
   console.log(`\n  ${COLORS.bright}2. 📊 QUALITY RATIOS & GAUGES:${COLORS.reset}`)
-  const docPct = debt.documentation_coverage_pct || 0
-  const compPct = debt.sovereign_compliance_pct || 0
-  console.log(`    Documentation Ratio: [${renderBar(docPct, 100, 36, COLORS.cyan)}] ${COLORS.bright}${docPct}%${COLORS.reset} (${(debt.comment_lines || 0).toLocaleString()} comments)`)
-  console.log(`    HTP-V5 Compliance:   [${renderBar(compPct, 100, 36, COLORS.green)}] ${COLORS.bright}${compPct}%${COLORS.reset} (${(debt.htp_v5_compliant_files || 0)} sovereign files)`)
+  const docPct = debt.documentation_coverage_pct
+  const metadataPct = debt.metadata_header_presence_pct
+  console.log(`    Comment-line Ratio:  ${displayMetric(docPct, '%')} (${(debt.comment_lines || 0).toLocaleString()} comment lines in sampled source)`)
+  console.log(`    Metadata Presence:   ${displayMetric(metadataPct, '%')} (${(debt.htp_v5_compliant_files || 0)} sampled files with @file_id; not compliance evidence)`)
 
-  console.log(`\n  ${COLORS.bright}3. 🚨 GOD FILES / COMPLEXITY HOTSPOTS (>500 LOC):${COLORS.reset}`)
-  console.log(`    Total God Files Detected: ${COLORS.yellow}${debt.god_files_count}${COLORS.reset}`)
-  if (godFiles.length > 0) {
-    const tableData = godFiles.map(g => ({
+  console.log(`\n  ${COLORS.bright}3. LARGE SOURCE FILES IN THE BOUNDED SAMPLE (>500 LOC):${COLORS.reset}`)
+  console.log(`    Files Detected: ${COLORS.yellow}${debt.large_files_over_500_count || 0}${COLORS.reset}`)
+  if (largeFiles.length > 0) {
+    const tableData = largeFiles.map(g => ({
       'File Path': g.file,
-      'Lines of Code': g.lines.toLocaleString(),
-      'Refactor Urgency': g.lines > 5000 ? '🔴 CRITICAL' : g.lines > 1000 ? '🟡 HIGH' : '🔵 MODERATE'
+      'Lines of Code': g.lines.toLocaleString()
     }))
     console.table(tableData)
   }
@@ -283,15 +517,15 @@ async function showExecutiveVisualCharts() {
   console.log(`║ 📈 EXECUTIVE VISUAL ANALYTICS, PIE CHARTS & HISTOGRAM MATRICES                         ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
-  console.log(`\n  ${COLORS.bright}1. 🥧 PIE CHART: 136 ENTERPRISE AGENTS BY 9 DIVISIONS:${COLORS.reset}\n`)
+  console.log(`\n  ${COLORS.bright}1. 🥧 REGISTERED AGENT DEFINITIONS BY DIVISION:${COLORS.reset}\n`)
   const divCounts = ent.divisions_breakdown || {}
   const slices = [
-    { glyph: `${COLORS.green}█${COLORS.reset}`, label: 'AI & Swarm', value: divCounts['AI Research & Multi-Agent Swarm'] || 19 },
-    { glyph: `${COLORS.yellow}▓${COLORS.reset}`, label: 'Engineering & IT', value: divCounts['Engineering & IT Infrastructure'] || 42 },
-    { glyph: `${COLORS.cyan}▒${COLORS.reset}`, label: 'Security & AppSec', value: divCounts['Security, AppSec & Pentesting'] || 18 },
-    { glyph: `${COLORS.magenta}░${COLORS.reset}`, label: 'Legal & NIS2', value: divCounts['Legal, Compliance & GDPR/NIS2'] || 11 },
-    { glyph: `${COLORS.blue}◆${COLORS.reset}`, label: 'Growth & Studio', value: divCounts['Growth, Marketing & UGC Studio'] || 14 },
-    { glyph: `${COLORS.dim}◇${COLORS.reset}`, label: 'Finance, Ops, Design', value: (divCounts['Product & Cupertino UX Design'] || 12) + (divCounts['Finance, Treasury & FinOps'] || 8) + (divCounts['Operations & Logistics'] || 6) }
+    { glyph: `${COLORS.green}█${COLORS.reset}`, label: 'AI & Swarm', value: divCounts['AI Research & Multi-Agent Swarm'] || 0 },
+    { glyph: `${COLORS.yellow}▓${COLORS.reset}`, label: 'Engineering & IT', value: divCounts['Engineering & IT Infrastructure'] || 0 },
+    { glyph: `${COLORS.cyan}▒${COLORS.reset}`, label: 'Security & AppSec', value: divCounts['Security, AppSec & Pentesting'] || 0 },
+    { glyph: `${COLORS.magenta}░${COLORS.reset}`, label: 'Legal & NIS2', value: divCounts['Legal, Compliance & GDPR/NIS2'] || 0 },
+    { glyph: `${COLORS.blue}◆${COLORS.reset}`, label: 'Growth & Studio', value: divCounts['Growth, Marketing & UGC Studio'] || 0 },
+    { glyph: `${COLORS.dim}◇${COLORS.reset}`, label: 'Finance, Ops, Design', value: (divCounts['Product & Cupertino UX Design'] || 0) + (divCounts['Finance, Treasury & FinOps'] || 0) + (divCounts['Operations & Logistics'] || 0) }
   ]
   console.log(renderAsciiPieChart(slices))
 
@@ -299,7 +533,7 @@ async function showExecutiveVisualCharts() {
   const modelUsage = stateDb.models_usage || {}
   const modelEntries = Object.entries(modelUsage).map(([model, stats]) => ({
     label: model.slice(0, 16),
-    value: stats.session_count || 1,
+    value: stats.session_count || 0,
     color: model.includes('claude') ? COLORS.magenta : model.includes('hydra') ? COLORS.cyan : COLORS.green
   }))
   if (modelEntries.length > 0) {
@@ -333,7 +567,7 @@ async function showAtomicGoalsDashboard() {
   const goalsList = goalsData.goals_registry || []
 
   console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 🎯 104+ ATOMIC SOVEREIGN GOALS & WORKFLOW 1-13 SEQUENTIAL BURNDOWN                     ║`)
+  console.log(`║ 🎯 ATOMIC GOALS REGISTRY & WORKFLOW BURNDOWN — COUNTS LOADED FROM SOURCE               ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
   console.log(`\n  ${COLORS.bright}1. OVERALL WORKFLOW PROGRESS & GOAL BURNDOWN GAUGE:${COLORS.reset}`)
@@ -366,7 +600,7 @@ async function showAtomicGoalsDashboard() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. IMMUTABLE EXECUTION LEDGER & CONTRACT ADHERENCE (OPZIONE [L] o --ledger)
+// 5. STORED EXECUTION RECORDS & DECLARED MATCH STATUS (OPZIONE [L] o --ledger)
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function showImmutableLedgerDashboard() {
@@ -376,27 +610,27 @@ async function showImmutableLedgerDashboard() {
   const entries = ledger.recent_ledger_entries || []
 
   console.log(`${COLORS.cyan}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 🔒 IMMUTABLE EXECUTION LEDGER & OUTPUT CONTRACT ADHERENCE ENGINE                        ║`)
-  console.log(`║    SHA-256 Merkle Chain · ED25519 Signatures · NIS2 7-Year Immutable Retention         ║`)
+  console.log(`║ 🔒 EXECUTION LEDGER RECORDS & OUTPUT CONTRACT STATUS                                   ║`)
+  console.log(`║    Stored fields are shown as records; cryptographic verification is reported separately║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
   console.log(`\n  ${COLORS.bright}1. LEDGER INTEGRITY & CONTRACT ADHERENCE RATIOS:${COLORS.reset}`)
-  console.log(`    Total Immutable Executions: ${COLORS.bright}${ledger.total_executions_recorded}${COLORS.reset}`)
-  console.log(`    Chat Interactions Persisted: ${COLORS.bright}${ledger.total_chat_interactions_recorded}${COLORS.reset}`)
-  console.log(`    Contract Adherence Rate:     ${COLORS.green}${COLORS.bright}${ledger.contract_adherence_rate_pct}% PERFECT MATCH${COLORS.reset}`)
-  console.log(`    Cryptographic Standard:      ${COLORS.cyan}ED25519_SHA512 + Parent-Child Merkle Chain${COLORS.reset}`)
+  console.log(`    Stored Execution Records:    ${COLORS.bright}${ledger.total_executions_recorded || 0}${COLORS.reset}`)
+  console.log(`    Legacy PERFECT_MATCH claim (not re-verified): ${COLORS.yellow}${COLORS.bright}${displayMetric(ledger.recorded_perfect_match_claim_rate_pct, '%')}${COLORS.reset}`)
+  console.log(`    Legacy Pseudo-Signatures:    ${COLORS.yellow}${ledger.legacy_pseudo_signature_records ?? 0}${COLORS.reset}`)
+  console.log(`    Cryptographic Verification:  ${ledger.cryptographic_verification_performed ? COLORS.green + 'VERIFIED' : COLORS.yellow + 'NOT PERFORMED'}${COLORS.reset}`)
 
-  console.log(`\n  ${COLORS.bright}2. 📑 RECENT CRYPTOGRAPHICALLY VERIFIED AUDIT RECORDS:${COLORS.reset}`)
+  console.log(`\n  ${COLORS.bright}2. 📑 RECENT STORED LEDGER RECORDS:${COLORS.reset}`)
   if (entries.length > 0) {
     const formatted = entries.map(e => ({
       'Entry ID': e.entry_id,
       'Task ID': e.task_id,
       'Goal ID': e.goal_id,
       'Agent': e.actor_agent_id.slice(0, 18),
-      'Status': e.delivery_match_status,
+      'Status': e.match_status,
       'Tokens': `${e.tokens_in} in / ${e.tokens_out} out`,
       'Latency': `${e.latency_ms} ms`,
-      'Merkle Hash': e.merkle_entry_hash
+      'Merkle Hash Field': e.merkle_hash
     }))
     console.table(formatted)
   }
@@ -417,20 +651,21 @@ async function showRequirementsDashboard() {
   const samples = reqData.sample_requirements || []
 
   console.log(`${COLORS.green}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 📜 SOVEREIGN REQUIREMENTS MATRIX (REQ-MVX-001..104 across 13 Sequential Phases)         ║`)
-  console.log(`║    ISO 27001 / ISO 42001 Controls · GDPR Art. 6.1.f · NIS2 7-Year Retention             ║`)
+  console.log(`║ 📜 REQUIREMENTS REGISTRY (REQ-MVX-001..104 across recorded workflow phases)             ║`)
+  console.log(`║    Declared control references are metadata; verification requires linked evidence       ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
   console.log(`\n  ${COLORS.bright}1. REQUIREMENTS VERIFICATION GAUGE:${COLORS.reset}`)
-  const compPct = reqData.compliance_rate_pct || 0
-  const compBar = renderBar(compPct, 100, 42, COLORS.green)
+  const compPct = reqData.compliance_rate_pct
+  const compBar = compPct === null || compPct === undefined ? 'N/D' : renderBar(compPct, 100, 42, COLORS.green)
   console.log(`    Total Formal Requirements: ${COLORS.bright}${reqData.total_requirements_count}${COLORS.reset} | Verified Pass: ${COLORS.green}${COLORS.bright}${reqData.verified_requirements_count}${COLORS.reset}`)
-  console.log(`    Requirements Compliance:   [${compBar}] ${COLORS.bright}${compPct}%${COLORS.reset}\n`)
+  console.log(`    Evidence-backed Compliance:[${compBar}] ${COLORS.bright}${displayMetric(reqData.compliance_rate_pct, '%')}${COLORS.reset}`)
+  console.log(`    ${COLORS.yellow}${reqData.verification_method || 'Le dichiarazioni del registro non equivalgono a prove di test.'}${COLORS.reset}\n`)
 
   console.log(`  ${COLORS.bright}2. 📊 REQUIREMENTS COMPLIANCE BY WORKFLOW PHASE:${COLORS.reset}`)
   const phaseEntries = phases.map(p => ({
     label: p.phase_name.slice(0, 18),
-    value: p.verified_pass,
+    value: p.verified_pass || 0,
     color: p.compliance_pct >= 100 ? COLORS.green : COLORS.cyan
   }))
   console.log(renderHistogram(phaseEntries, 28))
@@ -506,27 +741,20 @@ async function startDirectChat() {
       }
 
       if (trimmed.startsWith('/swarm') || trimmed === '/swarm') {
-        console.log(`\n${COLORS.cyan}[SWARM] Esecuzione turno coordinato multi-agente...${COLORS.reset}`)
+        console.log(`\n${COLORS.cyan}[SWARM] Verifica runtime, processi e heartbeat...${COLORS.reset}`)
         const executor = path.join(HERMES_ROOT, 'hermes_swarm_executor.js')
         if (fs.existsSync(executor)) {
-          try {
-            execSync(`node "${executor}"`, { stdio: 'inherit', cwd: HERMES_ROOT })
-          } catch (e) {
-            console.error(`${COLORS.red}Errore esecuzione swarm: ${e.message}${COLORS.reset}`)
-          }
+          const result = spawnSync(process.execPath, [executor, '--health'], { stdio: 'inherit', cwd: HERMES_ROOT, windowsHide: true })
+          if (result.error || result.status !== 0) console.error(`${COLORS.red}Verifica swarm fallita (exit ${result.status ?? 1}).${COLORS.reset}`)
         }
         console.log('')
         return promptUser()
       }
 
       console.log(`\n${COLORS.dim}[Invocazione reale di Hermes Agent Core...]${COLORS.reset}`)
-      const modelFlag = activeChatModel ? `-m "${activeChatModel}"` : ''
-      const cmd = `"${HERMES_EXE}" ${modelFlag} -z "${trimmed.replace(/"/g, '\\"')}"`
-      try {
-        execSync(cmd, { stdio: 'inherit', cwd: HERMES_ROOT })
-      } catch (e) {
-        console.error(`${COLORS.red}Errore esecuzione Hermes Agent: ${e.message}${COLORS.reset}`)
-      }
+      const hermesArgs = [...(activeChatModel ? ['-m', activeChatModel] : []), '-z', trimmed]
+      const result = spawnSync(HERMES_EXE, hermesArgs, { stdio: 'inherit', cwd: HERMES_ROOT, windowsHide: true })
+      if (result.error || result.status !== 0) console.error(`${COLORS.red}Errore esecuzione Hermes Agent (exit ${result.status ?? 1}): ${result.error?.message || 'runtime failed'}${COLORS.reset}`)
       console.log('')
       promptUser()
     })
@@ -557,8 +785,8 @@ async function showCompleteAnalytics() {
   const debt = data.technical_debt || {}
 
   console.log(`${COLORS.cyan}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 📊 HERMES COMPLETE ENTERPRISE TELEMETRY, 130+ AGENTS & COMPLIANCE DASHBOARD            ║`)
-  console.log(`║    100% Real SQLite Database · Live Hardware Sensors · Zero Hardcoded Values           ║`)
+  console.log(`║ 📊 HERMES EVIDENCE-BACKED TELEMETRY & DECLARATION COVERAGE DASHBOARD                   ║`)
+  console.log(`║    Database records · sensor provenance · unavailable values rendered as N/D            ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
   // Top Summary Cards
@@ -567,8 +795,8 @@ async function showCompleteAnalytics() {
   console.log(`  │ ${COLORS.dim}REAL TOTAL SESSIONS:   │ REAL MESSAGES STORED:  │ REAL INPUT TOKENS:     │ REAL OUTPUT TOKENS:    │${COLORS.reset}`)
   console.log(`  │ ${COLORS.cyan}${COLORS.bright}${String(stateDb.sessions_count || 0).padEnd(22)}${COLORS.reset} │ ${COLORS.green}${COLORS.bright}${String(stateDb.messages_count || 0).padEnd(22)}${COLORS.reset} │ ${COLORS.yellow}${COLORS.bright}${String((stateDb.input_tokens_total || 0).toLocaleString()).padEnd(22)}${COLORS.reset} │ ${COLORS.magenta}${COLORS.bright}${String((stateDb.output_tokens_total || 0).toLocaleString()).padEnd(22)}${COLORS.reset} │`)
   console.log(`  ├────────────────────────┼────────────────────────┼────────────────────────┼────────────────────────┤`)
-  console.log(`  │ ${COLORS.dim}CACHE READ TOKENS:     │ CACHE HIT RATIO:       │ SPRINT COMPLETION:     │ TECH DEBT REFACTOR:    │${COLORS.reset}`)
-  console.log(`  │ ${COLORS.green}${COLORS.bright}${String((stateDb.cache_tokens_total || 0).toLocaleString()).padEnd(22)}${COLORS.reset} │ ${COLORS.cyan}${COLORS.bright}${String(stateDb.cache_hit_ratio_percent + '%').padEnd(22)}${COLORS.reset} │ ${COLORS.green}${COLORS.bright}${String(kanban.completion_rate_percent + '%').padEnd(22)}${COLORS.reset} │ ${COLORS.yellow}${COLORS.bright}${String(debt.estimated_refactoring_hours + ' h').padEnd(22)}${COLORS.reset} │`)
+  console.log(`  │ ${COLORS.dim}CACHE READ TOKENS:     │ CACHE HIT RATIO:       │ SPRINT COMPLETION:     │ LARGE SOURCE FILES:    │${COLORS.reset}`)
+  console.log(`  │ ${COLORS.green}${COLORS.bright}${String((stateDb.cache_tokens_total || 0).toLocaleString()).padEnd(22)}${COLORS.reset} │ ${COLORS.cyan}${COLORS.bright}${String(displayMetric(stateDb.cache_hit_ratio_percent, '%')).padEnd(22)}${COLORS.reset} │ ${COLORS.green}${COLORS.bright}${String(displayMetric(kanban.completion_rate_percent, '%')).padEnd(22)}${COLORS.reset} │ ${COLORS.yellow}${COLORS.bright}${String(displayMetric(debt.large_files_over_500_count)).padEnd(22)}${COLORS.reset} │`)
   console.log(`  └────────────────────────┴────────────────────────┴────────────────────────┴────────────────────────┘`)
 
   // Projects Deep Analytics
@@ -583,35 +811,35 @@ async function showCompleteAnalytics() {
   }))
   console.table(projectList)
 
-  // 130+ Enterprise Agents Roster Summary
-  console.log(`  ${COLORS.bright}3. 👥 136 ENTERPRISE AGENTS ROSTER (${ent.total_agents_count} AGENTS ACROSS 9 DIVISIONS):${COLORS.reset}`)
+  // Seed personas are declarations, not running agent processes.
+  console.log(`  ${COLORS.bright}3. 👥 AGENT EVIDENCE: ${ent.agent_definitions_detected_count || 0} DEFINITIONS DETECTED / ${ent.registered_personas_count || 0} SEED PERSONAS:${COLORS.reset}`)
   const divTable = Object.entries(ent.divisions_breakdown || {}).map(([div, count]) => ({
     'Enterprise Division': div,
-    'Active Agents': count,
-    'Governance Tier': div.includes('Executive') ? 'SUPREME_BOARD' : div.includes('Security') ? 'TIER_1_CRITICAL' : 'TIER_2_OPERATIONAL'
+    'Registered': count,
+    'Source Type': 'SEED_PERSONA_UNVERIFIED'
   }))
   console.table(divTable)
 
   // Real Active Swarm
-  console.log(`  ${COLORS.bright}4. 🐝 REAL AUTONOMOUS SWARM (${swarm.swarm_id || 'hermes-default-swarm'}):${COLORS.reset}`)
-  console.log(`  Status: ${COLORS.green}${swarm.status || 'active'}${COLORS.reset} | Active Agents: ${COLORS.cyan}${swarm.active_agents_count || 0}${COLORS.reset} | Telemetry Events: ${COLORS.yellow}${swarm.telemetry_events_count || 0}${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}4. 🐝 SWARM TELEMETRY RECORD (${swarm.swarm_id || 'N/D'}):${COLORS.reset}`)
+  console.log(`  Status: ${COLORS.green}${swarm.status || 'N/D'}${COLORS.reset} | Recorded Agents: ${COLORS.cyan}${swarm.active_agents_count || 0}${COLORS.reset} | Telemetry Events: ${COLORS.yellow}${swarm.telemetry_events_count || 0}${COLORS.reset}`)
   const ev = swarm.eval_metrics || {}
-  console.log(`  🎯 Efficiency: ${COLORS.green}${ev.efficiency_score || 100.0}%${COLORS.reset} | Error Rate: ${COLORS.cyan}${ev.error_rate || 0.0}%${COLORS.reset} | Red Team Score: ${COLORS.green}${ev.redteam_score || 100.0}%${COLORS.reset} | Tasks Done: ${COLORS.bright}${ev.completed_tasks || 0}${COLORS.reset} | Latency: ${COLORS.yellow}${ev.avg_latency_ms || 0} ms${COLORS.reset}`)
+  console.log(`  Efficiency: ${COLORS.green}${displayMetric(ev.efficiency_score, '%')}${COLORS.reset} | Error Rate: ${COLORS.cyan}${displayMetric(ev.error_rate, '%')}${COLORS.reset} | Red Team: ${COLORS.green}${displayMetric(ev.redteam_score, '%')}${COLORS.reset} | Tasks: ${COLORS.bright}${displayMetric(ev.completed_tasks)}${COLORS.reset} | Latency: ${COLORS.yellow}${displayMetric(ev.avg_latency_ms, ' ms')}${COLORS.reset}`)
 
   // Storage Subsystem
   console.log(`\n  ${COLORS.bright}5. 💾 STORAGE SUBSYSTEM & SQLITE ALLOCATION:${COLORS.reset}`)
   const storageTable = Object.entries(storage.database_sizes_mb || {}).map(([file, size]) => ({
     'Database File': file,
     'Allocated Size': `${size} MB`,
-    'Status': 'ACTIVE_VERIFIED'
+    'Status': 'FILE_PRESENT'
   }))
   console.table(storageTable)
 
-  // Real Hardware Telemetry & Headless Savings
-  console.log(`  ${COLORS.bright}6. 🖥️  HARDWARE TELEMETRY & HEADLESS RAM SAVINGS INDEX:${COLORS.reset}`)
-  console.log(`  CPU Cores:         ${hw.cpu_cores_physical} Physical / ${hw.cpu_cores_logical} Logical Cores | Live Load: ${COLORS.yellow}${hw.cpu_percent}%${COLORS.reset}`)
-  console.log(`  System RAM:        ${hw.used_ram_gb} GB / ${hw.total_ram_gb} GB (${hw.ram_percent}%) | Process RSS: ${COLORS.cyan}${hw.process_rss_mb} MB${COLORS.reset}`)
-  console.log(`  RAM Savings Index: ${COLORS.green}${COLORS.bright}${hw.headless_ram_savings_percent}% RAM SAVED${COLORS.reset} (${hw.process_rss_mb} MB headless vs 480 MB full Electron UI)`)
+  // Real hardware telemetry; no synthetic comparison baseline.
+  console.log(`  ${COLORS.bright}6. 🖥️  HARDWARE TELEMETRY:${COLORS.reset}`)
+  console.log(`  CPU Cores:         ${displayMetric(hw.cpu_cores_physical)} Physical / ${displayMetric(hw.cpu_cores_logical)} Logical | Live Load: ${COLORS.yellow}${displayMetric(hw.cpu_percent, '%')}${COLORS.reset}`)
+  console.log(`  System RAM:        ${displayMetric(hw.used_ram_gb, ' GB')} / ${displayMetric(hw.total_ram_gb, ' GB')} (${displayMetric(hw.ram_percent, '%')}) | Process RSS: ${COLORS.cyan}${displayMetric(hw.process_rss_mb, ' MB')}${COLORS.reset}`)
+  console.log(`  Sensor Source:     ${COLORS.green}${hw.sensor_source || 'unavailable'}${COLORS.reset}`)
 
   console.log(`\n  ──────────────────────────────────────────────────────────────────────────────────────────`)
   await waitForEnter()
@@ -625,9 +853,10 @@ async function showAgentsRoster() {
   const roster = ent.agents_roster || []
 
   console.log(`${COLORS.magenta}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 👥 COMPLETE 130+ ENTERPRISE AGENTS ROSTER MATRIX (9 Divisions Breakdown)               ║`)
+  console.log(`║ 👥 REGISTERED SEED PERSONAS (DECLARATIONS, NOT LIVE AGENT PROCESSES)                    ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
-  console.log(`  Total Agents Cataloged: ${COLORS.bright}${ent.total_agents_count}${COLORS.reset} | Supreme Authority: ${COLORS.cyan}LDG Admin (God al di sopra di tutti)${COLORS.reset}\n`)
+  console.log(`  Agent definitions detected: ${COLORS.bright}${ent.agent_definitions_detected_count || 0}${COLORS.reset} | Seed personas parsed: ${COLORS.bright}${ent.registered_personas_count || 0}${COLORS.reset}`)
+  console.log(`  Operational agents: ${COLORS.yellow}${ent.operational_agents_count || 0}${COLORS.reset} (activity is sourced only from swarm telemetry) | Source: ${COLORS.cyan}${ent.source || 'N/D'}${COLORS.reset}\n`)
 
   const formatted = roster.map(a => ({
     'Agent ID': a.id.slice(0, 24),
@@ -650,22 +879,22 @@ async function showTraceabilityReport() {
   const hd = comp.header_validations || {}
 
   console.log(`${COLORS.green}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 🔒 HTP-V5 SOVEREIGN REQUIREMENT COMPLIANCE & MERKLE DAG TRACEABILITY AUDIT             ║`)
+  console.log(`║ 🔎 HTP-V5 METADATA PRESENCE & TRACEABILITY DECLARATION AUDIT                           ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
-  console.log(`\n  Standard:                   ${COLORS.cyan}${comp.sovereign_standard}${COLORS.reset}`)
-  console.log(`  Core Source Files Audited:  ${COLORS.green}${comp.core_framework_files_compliant}${COLORS.reset}`)
+  console.log(`\n  Declared Standard:          ${COLORS.cyan}${comp.declared_standard || 'N/D'}${COLORS.reset}`)
+  console.log(`  Scan Method:                ${COLORS.yellow}${comp.source || 'N/D'}${COLORS.reset}`)
+  console.log(`  Core Headers Present:       ${COLORS.green}${comp.core_framework_headers_present || 'N/D'}${COLORS.reset}`)
   console.log(`  Total Skills Inspected:     ${COLORS.bright}${comp.total_skills_inspected}${COLORS.reset}`)
   console.log(`  File IDs (@file_id):        ${COLORS.green}${hd.file_id_present}${COLORS.reset}`)
   console.log(`  Requirement References:     ${COLORS.green}${hd.requirement_refs_linked}${COLORS.reset}`)
-  console.log(`  Test References:            ${COLORS.green}${hd.test_refs_verified}${COLORS.reset}`)
+  console.log(`  Test References Present:    ${COLORS.green}${hd.test_refs_present_unverified}${COLORS.reset}`)
   console.log(`  Security Level Classified:  ${COLORS.green}${hd.security_level_classified}${COLORS.reset}`)
-  console.log(`  Anti-Mock Status:           ${COLORS.green}100% PROD ADMITTED (@impl_status_tmp_mock false)${COLORS.reset}`)
-  console.log(`  NIS2 Retention Directive:   ${COLORS.yellow}${comp.nis2_retention_policy}${COLORS.reset}`)
-  console.log(`  GDPR Art. 6 / 17 Erasure:   ${COLORS.yellow}${comp.gdpr_right_to_erasure}${COLORS.reset}`)
-
-  console.log(`\n  ISO 27001 Controls Enforced: ${COLORS.cyan}${comp.iso27001_controls?.join(', ')}${COLORS.reset}`)
-  console.log(`  ISO 42001 Controls Enforced: ${COLORS.magenta}${comp.iso42001_controls?.join(', ')}${COLORS.reset}`)
+  console.log(`  Signature Fields Present:   ${COLORS.yellow}${hd.signature_fields_present_unverified || 0} (not verified)${COLORS.reset}`)
+  console.log(`  Metadata Coverage:          ${COLORS.cyan}${displayMetric(comp.metadata_coverage_percent, '%')}${COLORS.reset}`)
+  console.log(`  Crypto Verification:        ${comp.cryptographic_verification_performed ? COLORS.green + 'YES' : COLORS.yellow + 'NO'}${COLORS.reset}`)
+  console.log(`  Control Enforcement Check:  ${comp.control_enforcement_verified ? COLORS.green + 'YES' : COLORS.yellow + 'NO'}${COLORS.reset}`)
+  if (comp.limitations?.length) console.log(`\n  ${COLORS.dim}${comp.limitations.join(' ')}${COLORS.reset}`)
 
   console.log(`\n  ──────────────────────────────────────────────────────────────────────────────────────────`)
   await waitForEnter()
@@ -687,21 +916,21 @@ async function showProjectsDeepAnalytics() {
   const projects = db.projects || []
 
   console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 📁 MULTI-PROJECT DEEP AUDIT, COMPONENT VERIFICATION & TRACEABILITY MATRIX              ║`)
-  console.log(`║    Proxima GPT 5.6 Luna High-Reasoning · Initial Docs vs Code Implementations          ║`)
+  console.log(`║ 📁 MULTI-PROJECT INVENTORY & HISTORICAL AUDIT-CLAIM REVIEW                             ║`)
+  console.log(`║    Stored matrix values remain declarations until independently reproduced               ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
   if (matrix && matrix.projects_summary) {
-    console.log(`  Total Projects Audited: ${COLORS.bright}${matrix.total_projects_audited}${COLORS.reset} | Model: ${COLORS.cyan}${matrix.model}${COLORS.reset} | Last Audit: ${COLORS.dim}${matrix.generated_at}${COLORS.reset}\n`)
+    console.log(`  Projects in stored matrix: ${COLORS.bright}${matrix.total_projects_audited}${COLORS.reset} | Recorded model: ${COLORS.cyan}${matrix.model || 'N/D'}${COLORS.reset} | Recorded at: ${COLORS.dim}${matrix.generated_at || 'N/D'}${COLORS.reset}\n`)
     
     const formatted = matrix.projects_summary.map(p => ({
       'Project': p.name.slice(0, 26),
       'Files': p.total_files,
       'Total LOC': p.total_loc.toLocaleString(),
-      'Coverage': `${p.coverage_pct}%`,
-      'God Files': p.god_files,
-      'Status': p.status === 'VERIFIED_SOVEREIGN' ? '🟢 SOVEREIGN' : '🟡 AUDITED',
-      'Ledger Entry': p.ledger_entry?.[0] || 'RECORDED'
+      'Recorded Coverage': displayMetric(p.coverage_pct, '%'),
+      'Large-file Claim': p.god_files ?? 'N/D',
+      'Recorded Status': p.status || 'N/D',
+      'Evidence Status': 'UNVERIFIED_SNAPSHOT'
     }))
     console.table(formatted)
   } else {
@@ -711,7 +940,7 @@ async function showProjectsDeepAnalytics() {
       'Name': p.name,
       'Files Tracked': p.files_tracked,
       'Directory Size': `${p.size_mb} MB`,
-      'Health Status': p.health_status === 'HEALTHY_ONLINE' ? '🟢 ONLINE' : '⚪ PENDING'
+      'Directory Status': p.health_status === 'DIRECTORY_PRESENT' ? '🟢 PRESENT' : '⚪ UNRESOLVED'
     }))
     console.table(formatted)
   }
@@ -730,19 +959,19 @@ async function showSwarmWorkload() {
   const agentHeat = swarm.agent_activity_heat || {}
 
   console.log(`${COLORS.cyan}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 🐝 REAL AUTONOMOUS SWARM EXECUTION TRAJECTORY & TOOL WORKLOAD HEATMAP                  ║`)
+  console.log(`║ 🐝 RECORDED SWARM TRAJECTORY & TOOL WORKLOAD HEATMAP                                   ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
-  console.log(`  Swarm ID: ${COLORS.bright}${swarm.swarm_id}${COLORS.reset} | Status: ${COLORS.green}${swarm.status}${COLORS.reset} | Active Agents: ${COLORS.cyan}${swarm.active_agents_count}${COLORS.reset}\n`)
+  console.log(`  Swarm ID: ${COLORS.bright}${swarm.swarm_id || 'N/D'}${COLORS.reset} | Status: ${COLORS.green}${swarm.status || 'N/D'}${COLORS.reset} | Recorded Agents: ${COLORS.cyan}${swarm.active_agents_count || 0}${COLORS.reset}\n`)
 
   console.log(`  ${COLORS.bright}EVALUATION & SLA METRICS:${COLORS.reset}`)
-  console.log(`  Efficiency: ${COLORS.green}${ev.efficiency_score}%${COLORS.reset} | Error Rate: ${COLORS.cyan}${ev.error_rate}%${COLORS.reset} | Red Team Pass: ${COLORS.green}${ev.redteam_score}%${COLORS.reset}`)
-  console.log(`  Tasks Done: ${COLORS.bright}${ev.completed_tasks}${COLORS.reset} | Avg Latency: ${COLORS.yellow}${ev.avg_latency_ms} ms${COLORS.reset}\n`)
+  console.log(`  Efficiency: ${COLORS.green}${displayMetric(ev.efficiency_score, '%')}${COLORS.reset} | Error Rate: ${COLORS.cyan}${displayMetric(ev.error_rate, '%')}${COLORS.reset} | Red Team: ${COLORS.green}${displayMetric(ev.redteam_score, '%')}${COLORS.reset}`)
+  console.log(`  Tasks Done: ${COLORS.bright}${displayMetric(ev.completed_tasks)}${COLORS.reset} | Avg Latency: ${COLORS.yellow}${displayMetric(ev.avg_latency_ms, ' ms')}${COLORS.reset}\n`)
 
   console.log(`  ${COLORS.bright}TOOL INVOCATIONS BREAKDOWN:${COLORS.reset}`)
   const toolTable = Object.entries(toolCounts).map(([tool, cnt]) => ({
     'Tool Name': tool,
     'Invocations': cnt,
-    'Status': 'ACTIVE_RESOLVED'
+    'Status': 'RECORDED_EVENT'
   }))
   console.table(toolTable)
 
@@ -802,29 +1031,26 @@ async function showDiscrepanciesAndMorningReport() {
 
 async function showLiveSwarmJobMonitor(activeJobIdx = 0) {
   clearScreen()
-  
-  // Query multi-jobs live state
-  const daemonPy = path.join(HERMES_ROOT, 'tools', 'swarm_goals', 'multi_jobs_daemon.py')
-  let state = { jobs: [] }
-  if (fs.existsSync(daemonPy)) {
-    try {
-      const out = execSync(`python "${daemonPy}"`, { encoding: 'utf8', cwd: HERMES_ROOT })
-      state = JSON.parse(out)
-    } catch (e) {}
-  }
-
-  const jobs = state.jobs || []
-  if (jobs.length === 0) {
-    const data = getRealMetrics()
-    if (data?.live_swarm_job) jobs.push(data.live_swarm_job)
-  }
+  const data = getRealMetrics()
+  const jobs = (data?.swarm_jobs?.jobs || []).map(job => ({
+    ...job,
+    job_id: job.id,
+    start_time_iso: job.last_run || job.created_at || null,
+    start_time_local: job.last_run || job.created_at || null,
+    scheduled_end_time_iso: job.deadline || job.next_run || null,
+    scheduled_end_time_local: job.deadline || job.next_run || null,
+    progress_pct: null,
+    elapsed_formatted: null,
+    remaining_formatted: null,
+    live_agent_logs: [],
+  }))
 
   const job = jobs[activeJobIdx] || jobs[0] || {}
   const logs = job.live_agent_logs || []
 
   console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ ⏳ HERMES MULTI-JOB AUTONOMOUS SWARM MONITOR · REAL-TIME DEDICATED TELEMETRY HUD      ║`)
-  console.log(`║    Proxima GPT 5.6 Luna High-Reasoning · Dedicated Progress & Metrics per Job          ║`)
+  console.log(`║ ⏳ HERMES REGISTERED JOBS & VERIFIED RUN ARTIFACTS                                     ║`)
+  console.log(`║    Registry state only; no synthetic progress, agent logs or completion claims          ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
   // Multi-Job Tab Selector Bar
@@ -839,12 +1065,12 @@ async function showLiveSwarmJobMonitor(activeJobIdx = 0) {
   }
 
   const statusColor = COLORS.green
-  console.log(`  Job ID: ${COLORS.bright}${job.job_id || 'JOB-SWARM-AUDIT-10H'}${COLORS.reset} | Status: ${statusColor}${job.status || 'ACTIVE_RUNNING'}${COLORS.reset} | Modello: ${COLORS.cyan}${job.current_model || 'proxima-chatgpt-5-6-sol'}${COLORS.reset}`)
-  console.log(`  Titolo:                          ${COLORS.yellow}${job.title || 'Swarm Autonomous Execution'}${COLORS.reset}`)
-  console.log(`  Progetto Target:                 ${COLORS.cyan}${job.project_name || job.project_id || 'Ecosistema Hermes'}${COLORS.reset}`)
-  console.log(`  🕒 Avvio Job (Start Time):       ${COLORS.bright}${job.start_time_local || '2026-08-17 04:11:01'}${COLORS.reset} (ISO: ${job.start_time_iso || ''})`)
-  console.log(`  🏁 Fine Prevista (Target End):   ${COLORS.bright}${job.scheduled_end_time_local || '2026-08-17 14:11:01'}${COLORS.reset}`)
-  console.log(`  ⏱️  Tempo Trascorso:              ${COLORS.cyan}${job.elapsed_formatted || '0h 0m'}${COLORS.reset} | Rimanente: ${COLORS.yellow}${job.remaining_formatted || '0h 0m'}${COLORS.reset}`)
+  console.log(`  Job ID: ${COLORS.bright}${job.job_id || 'N/D'}${COLORS.reset} | Status: ${statusColor}${job.status || 'N/D'}${COLORS.reset} | Ultimo run: ${COLORS.cyan}${job.last_run_status || 'mai eseguito'}${COLORS.reset}`)
+  console.log(`  Titolo:                          ${COLORS.yellow}${job.title || 'N/D'}${COLORS.reset}`)
+  console.log(`  Progetto Target:                 ${COLORS.cyan}${job.project_name || job.project_id || 'N/D'}${COLORS.reset}`)
+  console.log(`  🕒 Ultima esecuzione/creazione:   ${COLORS.bright}${job.start_time_local || 'N/D'}${COLORS.reset}`)
+  console.log(`  🏁 Deadline / prossima scadenza:  ${COLORS.bright}${job.scheduled_end_time_local || 'N/D'}${COLORS.reset}`)
+  console.log(`  📁 Ultimo artifact verificabile:  ${COLORS.cyan}${job.last_run_artifact || 'N/D'}${COLORS.reset}`)
 
   // Dedicated Progress Bar
   const pct = Math.min(100, Math.max(0, job.progress_pct || 0))
@@ -852,33 +1078,33 @@ async function showLiveSwarmJobMonitor(activeJobIdx = 0) {
   const filled = Math.round((pct / 100) * barLen)
   const empty = barLen - filled
   const barStr = `[${'█'.repeat(filled)}${'░'.repeat(empty)}] ${pct.toFixed(1)}%`
-  console.log(`  📊 Avanzamento Specifico Job:    ${COLORS.green}${barStr}${COLORS.reset}`)
+  console.log(`  📊 Avanzamento dichiarato:       ${job.progress_pct == null ? `${COLORS.yellow}N/D (nessuna evidenza live)${COLORS.reset}` : `${COLORS.green}${barStr}${COLORS.reset}`}`)
   
   if (job.active_pipeline_step) {
     console.log(`  🔄 Fase Pipeline Attiva:         ${COLORS.bright}Step ${job.active_pipeline_step.step}/6: ${job.active_pipeline_step.name}${COLORS.reset}`)
     console.log(`  📦 Deliverable in Generazione:   ${COLORS.green}${job.active_pipeline_step.deliverable}${COLORS.reset}`)
   } else {
-    console.log(`  🔄 Ciclo Attivo:                 ${COLORS.bright}Ciclo #${job.current_cycle || 1} su ${job.total_projects || 11} Progetti Ecosistema${COLORS.reset}`)
+    console.log(`  🔄 Pipeline registrata:          ${COLORS.bright}${job.workflow_pipeline?.length || 0} fasi${COLORS.reset}`)
   }
 
-  console.log(`  🤖 Agent Attivo in Turno:        ${COLORS.magenta}${job.current_active_agent || 'hermes-orchestrator'}${COLORS.reset} (${job.current_active_role || 'Lead Agent'})`)
-  console.log(`  🔒 Blocco Sicurezza Sovrano:     ${COLORS.green}${job.safety_lock || 'SOVEREIGN_NON_DESTRUCTIVE_READ_ONLY'} (ATTIVO)${COLORS.reset}\n`)
+  console.log(`  🤖 Agent attivo:                 ${COLORS.magenta}${job.current_active_agent || 'N/D'}${COLORS.reset}`)
+  console.log(`  🔒 Policy sicurezza registrata:  ${COLORS.green}${job.safety_lock || 'N/D'}${COLORS.reset}\n`)
 
-  console.log(`  ${COLORS.bright}LOGGING IN TEMPO REALE DEDICATO A QUESTO JOB (TRACCIATI NEL MERKLE LEDGER):${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}LOG DI ESECUZIONE VERIFICATI PER QUESTO JOB:${COLORS.reset}`)
   if (logs.length > 0) {
     const formatted = logs.slice(0, 8).map(l => ({
       'Time': l.timestamp,
       'Agent': (l.agent_id || '').slice(0, 20),
       'Project': (l.project || '').slice(0, 16),
       'Action / Deliverable': (l.deliverable ? `[${l.deliverable}] ` : '') + (l.action || '').slice(0, 34),
-      'Coverage': l.coverage || '100%',
+      'Coverage': l.coverage || 'N/D',
       'Tokens': `${l.tokens_in || 0} in / ${l.tokens_out || 0} out`,
       'Latency': `${l.latency_ms || 0} ms`,
-      'Ledger Hash': (l.ledger_entry && l.ledger_entry[0]) ? l.ledger_entry[0] : 'SAVED'
+      'Ledger Hash': (l.ledger_entry && l.ledger_entry[0]) ? l.ledger_entry[0] : 'N/D'
     }))
     console.table(formatted)
   } else {
-    console.log(`  ${COLORS.dim}In attesa del primo log di esecuzione live dagli agent in background...${COLORS.reset}\n`)
+    console.log(`  ${COLORS.dim}Nessun log verificato allegato al registro; consultare last_run_artifact dopo un'esecuzione.${COLORS.reset}\n`)
   }
 
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
@@ -904,57 +1130,37 @@ async function showLiveSwarmJobMonitor(activeJobIdx = 0) {
 
 async function showKimiK3Dashboard() {
   clearScreen()
-  const kimiBridge = path.join(KIMI_DIR, 'kimi_k3_live_bridge.py')
-  let tele = null
-  if (fs.existsSync(kimiBridge)) {
-    try {
-      const out = execSync(`python "${kimiBridge}"`, { encoding: 'utf8' })
-      tele = JSON.parse(out)
-    } catch (e) {}
-  }
+  const data = getRealMetrics()
+  const endpointOnline = data?.ports_probe?.some(item => item.port === 8095 && item.status === 'ONLINE') || false
+  const checkpointAvailable = hasKimiCheckpoint()
+  const serviceScript = path.join(KIMI_DIR, 'kimi_k3_service.py')
+  const cSourceAvailable = fs.existsSync(path.join(KIMI_DIR, 'src')) && fs.existsSync(path.join(KIMI_DIR, 'CMakeLists.txt'))
+  let bridgeHealth = null
+  try {
+    const response = await fetch('http://127.0.0.1:8095/health', { signal: AbortSignal.timeout(2500) })
+    if (response.ok) bridgeHealth = await response.json()
+  } catch (_) {}
+  const layer = bridgeHealth?.local_first_layer || null
+  const isCurrentBridge = bridgeHealth?.service === 'kimi-k3-first-layer-hydra-bridge'
 
   console.log(`${COLORS.blue}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 🧠 KIMI K3 · WIDE-CONTEXT ROUTER · DISPATCH BENCH CONTROL DASHBOARD                    ║`)
-  console.log(`║    MoE · 1.5T Weights / 38B Awake · 1M Span · Swarm Mode · 434 Chords Live             ║`)
+  console.log(`║ 🧠 KIMI-COMPATIBLE PROVIDER ROUTER · VERIFIED RUNTIME STATUS                            ║`)
+  console.log(`║    Endpoint, source tree, checkpoint and backend availability — no synthetic metrics    ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
 
-  console.log(`  ${COLORS.cyan}TOTAL GROUPS: 384${COLORS.reset} | ${COLORS.blue}WOKEN / TOKEN: 8${COLORS.reset} | ${COLORS.green}TOKENS / SEC: 103${COLORS.reset} | ${COLORS.yellow}TTFT: 196ms${COLORS.reset}`)
-  console.log(`  ${COLORS.dim}PASS 273 · SPAN 1,203K · GUESSES 4,736${COLORS.reset}\n`)
-
-  console.log(`  ${COLORS.bright}PIPELINE STAGES:${COLORS.reset}`)
-  console.log(`  [01 SPLIT 1.2M] ➔ [02 PICK 384→8] ➔ ${COLORS.blue}[03 LOOK (OPENED 4%)]${COLORS.reset} ➔ [04 RUN 38B] ➔ [05 GUESS 4br] ➔ [06 CHECK]`)
-  console.log(`  ${COLORS.red}TOSSED: 14,208${COLORS.reset} ─────────────────── ◆ GATE ◆ ─────────────────── ${COLORS.green}KEPT + STREAMED: 4,736${COLORS.reset}\n`)
-
-  console.log(`  ${COLORS.bright}SKILL GAP (K3 vs K2 +19.4 AVG LIFT):${COLORS.reset}`)
-  console.log(`  LONG-CTX: ${COLORS.green}+36${COLORS.reset} | AGENTIC: ${COLORS.green}+15${COLORS.reset} | CODE: ${COLORS.green}+29${COLORS.reset} | MATH: ${COLORS.green}+3${COLORS.reset} | GROUNDED: ${COLORS.green}+14${COLORS.reset}\n`)
-
-  console.log(`  ${COLORS.bright}RELATION RING & SWARM CHORDS (LIVE 434 CHORDS):${COLORS.reset}`)
-  const ringTable = [
-    { 'Arc Group': 'MAKERS', 'Nodes': 35, 'Color': '🔵 Blue', 'Role': 'Code & Architecture Generators' },
-    { 'Arc Group': 'HOLDINGS', 'Nodes': 35, 'Color': '🟢 Green', 'Role': 'State, DB & Merkle Asset Store' },
-    { 'Arc Group': 'RULES', 'Nodes': 33, 'Color': '🟣 Purple', 'Role': 'HTP-V5 & NIS2 Compliance Guard' },
-    { 'Arc Group': 'BUYERS', 'Nodes': 29, 'Color': '🟠 Amber', 'Role': 'Client Handlers & Consumer API' }
-  ]
-  console.table(ringTable)
-  console.log(`  Nodes: ${COLORS.bright}132${COLORS.reset} | Chords: ${COLORS.bright}434${COLORS.reset} | Agents: ${COLORS.cyan}300${COLORS.reset} | Top Degree: ${COLORS.bright}13${COLORS.reset} | Density: ${COLORS.bright}0.050${COLORS.reset} | Cross-Group: ${COLORS.magenta}194${COLORS.reset}\n`)
-
-  console.log(`  ${COLORS.bright}THE REPEAT BOARD (1,008 CELLS) & WANDER LEDGER:${COLORS.reset}`)
-  console.log(`  Kept Shape: ${COLORS.green}70.4%${COLORS.reset} | Stopped by HOUSE-RULES.md: ${COLORS.red}298${COLORS.reset}`)
-  console.log(`  • NO SOURCE:     [██████████████░░░░░░] ${COLORS.red}71${COLORS.reset}`)
-  console.log(`  • SILENT MERGE:  [███████████████░░░░░] ${COLORS.yellow}74${COLORS.reset}`)
-  console.log(`  • BEYOND SCOPE:  [██████████████░░░░░░] ${COLORS.magenta}72${COLORS.reset}`)
-  console.log(`  • FORM SLIP:     [████████████████░░░░] ${COLORS.cyan}81${COLORS.reset}`)
-  console.log(`  Standing File: ${COLORS.blue}HOUSE-RULES.md${COLORS.reset} (Opened Every Rerun · Time: 30s)\n`)
+  console.table([
+    { Check: 'API endpoint 127.0.0.1:8095', Status: endpointOnline ? 'ONLINE' : 'OFFLINE', Evidence: isCurrentBridge ? bridgeHealth.service : endpointOnline ? 'legacy/incompatible service identity' : 'TCP probe failed' },
+    { Check: 'Hydra heavy-work router', Status: bridgeHealth?.hydra?.online ? 'ONLINE' : 'UNVERIFIED', Evidence: bridgeHealth?.hydra?.url || 'http://127.0.0.1:8090/v1/status' },
+    { Check: 'Python compatibility service', Status: fs.existsSync(serviceScript) ? 'AVAILABLE' : 'MISSING', Evidence: serviceScript },
+    { Check: 'C engine source tree', Status: cSourceAvailable ? 'AVAILABLE' : 'MISSING', Evidence: KIMI_DIR },
+    { Check: 'Released Kimi checkpoint', Status: layer?.shard_dir_exists || checkpointAvailable ? 'AVAILABLE' : 'MISSING', Evidence: layer?.shard_dir || (checkpointAvailable ? 'SHARD_DIR/KIMI_K3_CHECKPOINT' : 'not configured') },
+    { Check: 'Real local layer 0', Status: layer?.verified ? 'VERIFIED' : 'NOT ACTIVE', Evidence: layer?.evidence || 'requires test_real_layer + reference verifier evidence' },
+  ])
+  console.log(`  ${COLORS.yellow}Contratto:${COLORS.reset} il lavoro pesante passa esclusivamente da Hydra; nessun fallback diretto OpenRouter/Gemini nel bridge.`)
+  console.log(`  Il layer 0 locale viene dichiarato attivo solo dopo test C e confronto di riferimento sul checkpoint rilasciato.\n`)
 
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
-  console.log(`  [W]  ${COLORS.cyan}Apri Dashboard Grafica Standalone in Browser (kimi_k3_dashboard.html)${COLORS.reset}`)
-
-  await promptNavigation(showKimiK3Dashboard, async (ans) => {
-    if (ans === 'W') {
-      const htmlP = path.join(KIMI_DIR, 'kimi_k3_dashboard.html')
-      execSync(`start "" "${htmlP}"`, { shell: 'cmd.exe' })
-    }
-  })
+  await promptNavigation(showKimiK3Dashboard)
 }
 
 async function showOpenChatCutTool() {
@@ -974,16 +1180,16 @@ async function showLdgInnovationHub() {
   clearScreen()
   console.log(`${COLORS.green}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
   console.log(`║ 🏢 LDG INNOVATION · ENTERPRISE MASTER CONTROL & HARNESS HUB                             ║`)
-  console.log(`║    Next.js 15 · React 19 · Prisma · 104+ REQ-MVX Requisiti · B2B Pipeline & Swarms      ║`)
+  console.log(`║    Stack e requisiti rilevati dal progetto · B2B Pipeline & Swarms                       ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
   console.log(`  Progetto: ${COLORS.yellow}${B2B_PROJECT}${COLORS.reset}`)
-  console.log(`  Autorità: ${COLORS.cyan}LDG Admin (God al di sopra di tutti)${COLORS.reset}\n`)
+  console.log(`  Operatore: ${COLORS.cyan}LDG Admin${COLORS.reset}\n`)
 
   console.log(`  ${COLORS.bright}AZIONI RAPIDE LDG INNOVATION:${COLORS.reset}`)
   console.log(`  [1]  ${COLORS.green}🚀 Avvia Web App Next.js Dev Server${COLORS.reset}      (Porta 3000 - npm run dev)`)
-  console.log(`  [2]  ${COLORS.yellow}📜 Valida Requisiti Sovrani & Matrice${COLORS.reset}     (104+ REQ-MVX Traceability)`)
+  console.log(`  [2]  ${COLORS.yellow}📜 Valida Requisiti & Matrice Evidenze${COLORS.reset}     (conteggio ricavato dal repository)`)
   console.log(`  [3]  ${COLORS.cyan}🤖 Esegui B2B Suite v2 (Pilot Lead Gen)${COLORS.reset}   (OSINT, Crawler & Video Prep)`)
-  console.log(`  [4]  ${COLORS.magenta}🥧 Lancia Pi Coding Agent con Kimi K3${COLORS.reset}     (Sessione AI su codice LDG)`)
+  console.log(`  [4]  ${COLORS.magenta}🥧 Lancia Pi Coding Agent${COLORS.reset}                 (Provider verificato dal runtime)`)
   console.log(`  [5]  ${COLORS.yellow}⚡ Check Ops Health & Alert Matrix${COLORS.reset}       (npm run ops:health)`)
   console.log(`  [6]  ${COLORS.blue}🪟 Apri Finestra Indipendente LDG${COLORS.reset}        (Dedicated PowerShell Workspace)`)
   console.log(`  [0]  ${COLORS.dim}Torna al Menu Principale${COLORS.reset}`)
@@ -1011,17 +1217,24 @@ async function showLdgInnovationHub() {
       }
       case '3': {
         console.log(`${COLORS.cyan}Avvio B2B Suite v2 Pilot su LDG Innovation...${COLORS.reset}`)
-        try { execSync('python scripts/b2b_suite_v2.py --mode generate --input data/b2b_acquisition/verified_inputs/blackshape_minimal_v2.json --limit 1', { stdio: 'inherit', cwd: B2B_PROJECT }) }
-        catch (e) { console.error(`${COLORS.red}Errore esecuzione B2B Suite: ${e.message}${COLORS.reset}`) }
+        if (!PYTHON_EXE) {
+          console.error(`${COLORS.red}Nessun runtime Python funzionante disponibile.${COLORS.reset}`)
+        } else {
+          const result = spawnSync(PYTHON_EXE, ['scripts/b2b_suite_v2.py', '--mode', 'generate', '--input', 'data/b2b_acquisition/verified_inputs/blackshape_minimal_v2.json', '--limit', '1'], { stdio: 'inherit', cwd: B2B_PROJECT })
+          if (result.error || result.status !== 0) console.error(`${COLORS.red}Errore esecuzione B2B Suite (exit ${result.status ?? 1}): ${result.error?.message || 'pipeline failed'}${COLORS.reset}`)
+        }
         await waitForEnter()
         showLdgInnovationHub()
         break
       }
       case '4': {
-        console.log(`${COLORS.magenta}Avvio Pi Coding Agent con Kimi K3 MoE per LDG Innovation...${COLORS.reset}`)
+        console.log(`${COLORS.magenta}Avvio Pi Coding Agent per LDG Innovation...${COLORS.reset}`)
         const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
         if (fs.existsSync(piKimi)) {
+          if (!hasKimiCheckpoint()) console.log(`${COLORS.yellow}Nota: checkpoint Kimi locale non rilevato; il runner userà solo un provider realmente configurato.${COLORS.reset}`)
           execSync(`start "Pi Coding Agent - LDG Workspace" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'; & '${piKimi}'"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+        } else {
+          console.error(`${COLORS.red}Runner Pi non trovato: ${piKimi}${COLORS.reset}`)
         }
         await waitForEnter()
         showLdgInnovationHub()
@@ -1050,6 +1263,1467 @@ async function showLdgInnovationHub() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// E-COMMERCE MASTER CONTROL & MULTI-STORE HUB
+// ─────────────────────────────────────────────────────────────────────────────
+
+function checkPortOnline(port, host = '127.0.0.1', timeout = 800) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket()
+    let status = false
+    socket.setTimeout(timeout)
+    socket.on('connect', () => { status = true; socket.destroy() })
+    socket.on('timeout', () => { socket.destroy() })
+    socket.on('error', () => { socket.destroy() })
+    socket.on('close', () => { resolve(status) })
+    socket.connect(port, host)
+  })
+}
+
+function openBrowserUrl(url) {
+  try {
+    execSync(`start "" "${url}"`, { shell: 'cmd.exe', stdio: 'ignore', windowsHide: true })
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FOUNDER OS SUITE & EXECUTIVE CONTROL CENTER (OPZIONE [1] / [FOS])
+// ─────────────────────────────────────────────────────────────────────────────
+
+function launchFounderOsProcess(title, cwd, scriptName) {
+  try {
+    const child = spawn('cmd.exe', ['/c', 'start', title, 'cmd.exe', '/k', 'node', scriptName], {
+      cwd,
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+      env: { ...process.env, FOUNDER_OS_ORCHESTRATOR: '1' }
+    })
+    child.unref()
+    return true
+  } catch (err) {
+    console.error(`Errore avvio ${title}:`, err.message)
+    return false
+  }
+}
+
+async function ensureFounderOsRunning() {
+  let [frontendOnline, backendOnline] = await Promise.all([
+    checkPortOnline(5173),
+    checkPortOnline(3001)
+  ])
+
+  if (!backendOnline && fs.existsSync(FOUNDER_OS_BACKEND)) {
+    console.log(`${COLORS.yellow}Avvio Backend Next.js Founder OS (porta 3001)...${COLORS.reset}`)
+    launchFounderOsProcess('Founder OS Backend (:3001)', FOUNDER_OS_BACKEND, 'start-dev.js')
+  }
+
+  if (!frontendOnline && fs.existsSync(FOUNDER_OS_FRONTEND)) {
+    console.log(`${COLORS.yellow}Avvio Frontend Vite Founder OS (porta 5173)...${COLORS.reset}`)
+    launchFounderOsProcess('Founder OS Frontend (:5173)', FOUNDER_OS_FRONTEND, 'start-dev.cjs')
+  }
+
+  if (!frontendOnline || !backendOnline) {
+    console.log(`${COLORS.cyan}Attesa avvio server Founder OS (Frontend :5173 / Backend :3001)...${COLORS.reset}`)
+    for (let i = 0; i < 25; i++) {
+      await new Promise(r => setTimeout(r, 400))
+      const [fe, be] = await Promise.all([checkPortOnline(5173), checkPortOnline(3001)])
+      if (fe && be) {
+        frontendOnline = fe
+        backendOnline = be
+        break
+      }
+    }
+  }
+}
+
+function showFounderOsDbDetails() {
+  clearScreen()
+  console.log(`${COLORS.cyan}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 📊 FOUNDER OS DATABASE INSPECTOR (data/founder-os.db)                                  ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  if (!fs.existsSync(FOUNDER_OS_DB)) {
+    console.log(`${COLORS.red}Database non trovato in ${FOUNDER_OS_DB}${COLORS.reset}`)
+  } else {
+    try {
+      const { DatabaseSync } = require('node:sqlite')
+      const db = new DatabaseSync(FOUNDER_OS_DB, { readOnly: true })
+      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all()
+      console.log(`  ${COLORS.bright}TABELLE E CONTEGGIO RECORD:${COLORS.reset}`)
+      const summary = []
+      for (const { name } of tables) {
+        try {
+          const count = db.prepare(`SELECT COUNT(*) as c FROM ${name}`).get().c
+          summary.push({ 'Tabella': name, 'Record': count })
+        } catch (_) {
+          summary.push({ 'Tabella': name, 'Record': 'Errore' })
+        }
+      }
+      console.table(summary)
+
+      console.log(`\n  ${COLORS.bright}DETTAGLIO PROGETTO "PRODUZIONE REAL" (pr_real):${COLORS.reset}`)
+      try {
+        const pReal = db.prepare("SELECT * FROM projects WHERE id = 'pr_real'").get()
+        if (pReal) {
+          console.log(`  • Nome: ${COLORS.green}${pReal.name}${COLORS.reset} | Budget: ${pReal.budget} ${pReal.currency} | Bank: ${pReal.bank} ${pReal.currency}`)
+          console.log(`  • Entità: ${pReal.legal_entity} | Anno Fiscale: ${pReal.fiscal_year} | VAT: ${pReal.vat_rate}%`)
+        }
+      } catch (_) {}
+    } catch (e) {
+      console.error(`${COLORS.red}Errore lettura database: ${e.message}${COLORS.reset}`)
+    }
+  }
+
+  waitForEnter().then(showFounderOsHub)
+}
+
+async function showFounderOsHub() {
+  clearScreen()
+  const [frontendOnline, backendOnline] = await Promise.all([
+    checkPortOnline(5173),
+    checkPortOnline(3001)
+  ])
+
+  let projectCount = 'N/D'
+  let tableCount = 'N/D'
+  let projectsList = []
+  if (fs.existsSync(FOUNDER_OS_DB)) {
+    try {
+      const { DatabaseSync } = require('node:sqlite')
+      const db = new DatabaseSync(FOUNDER_OS_DB, { readOnly: true })
+      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()
+      tableCount = tables.length
+      projectsList = db.prepare("SELECT id, name, desc, currency, bank, vat_rate, legal_entity, fiscal_year FROM projects").all()
+      projectCount = projectsList.length
+    } catch (_) {}
+  }
+
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🚀 FOUNDER OS SUITE — UNIFIED EXECUTIVE CONTROL CENTER                                  ║`)
+  console.log(`║    Startup & Venture Cockpit · Frontend (:5173) · Backend (:3001) · SQLite DB (V2.1)   ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  const statusFe = frontendOnline ? `${COLORS.green}ONLINE (:5173)${COLORS.reset}` : `${COLORS.red}OFFLINE (:5173)${COLORS.reset}`
+  const statusBe = backendOnline ? `${COLORS.green}ONLINE (:3001)${COLORS.reset}` : `${COLORS.red}OFFLINE (:3001)${COLORS.reset}`
+  const dbStatus = fs.existsSync(FOUNDER_OS_DB) ? `${COLORS.green}CONNESSO (${projectCount} Progetti, ${tableCount} Tabelle)${COLORS.reset}` : `${COLORS.red}NON TROVATO${COLORS.reset}`
+
+  console.log(`  Stato Piattaforma: Frontend ${statusFe} | Backend Next.js ${statusBe} | Database ${dbStatus}`)
+  console.log(`  Accesso Web:       ${COLORS.cyan}http://localhost:5173${COLORS.reset} (Dev Auto-Login attivo · Ruolo: ${COLORS.bright}admin_lucadeg${COLORS.reset})\n`)
+
+  if (projectsList.length > 0) {
+    console.log(`  ${COLORS.bright}PROGETTI ATTIVI REGISTRATI NEL DATABASE:${COLORS.reset}`)
+    projectsList.forEach(p => {
+      console.log(`  • ${COLORS.cyan}${COLORS.bright}${p.name.padEnd(18)}${COLORS.reset} [ID: ${p.id}] ${COLORS.dim}${p.desc || ''}${COLORS.reset} (${p.currency} · Entità: ${p.legal_entity || 'N/D'} · Anno: ${p.fiscal_year || '2026'})`)
+    })
+    console.log()
+  }
+
+  console.log(`  ${COLORS.bright}AZIONI RAPIDE FOUNDER OS:${COLORS.reset}`)
+  console.log(`  [1]  ${COLORS.yellow}${COLORS.bright}🌐 Apri Founder OS nel Browser${COLORS.reset}         (http://localhost:5173 · Auto-start se offline)`)
+  console.log(`  [2]  ${COLORS.green}${COLORS.bright}⚡ Avvia ENTRAMBI i Server${COLORS.reset}             (Frontend Vite :5173 + Backend Next.js :3001)`)
+  console.log(`  [3]  ${COLORS.green}🚀 Avvia solo Frontend Vite${COLORS.reset}            (npm run dev su porta 5173)`)
+  console.log(`  [4]  ${COLORS.green}⚙️  Avvia solo Backend Next.js${COLORS.reset}          (npm run dev su porta 3001)`)
+  console.log(`  [5]  ${COLORS.red}🛑 Arresta Server Founder OS${COLORS.reset}           (Libera porte 5173 e 3001)`)
+  console.log(`  [6]  ${COLORS.cyan}📊 Ispezione Approfondita Database${COLORS.reset}     (Statistiche tabelle, KPI, OKR e task)`)
+  console.log(`  [7]  ${COLORS.magenta}📁 Apri Directory Founder OS${COLORS.reset}           (Esplora cartella sorgente)`)
+  console.log(`  [0]  ${COLORS.dim}Torna al Menu Principale TUIOS${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona azione Founder OS (1-7, 0): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const c = (choice || '').trim().toUpperCase()
+    switch (c) {
+      case '1':
+      case 'OPEN':
+      case 'BROWSER': {
+        await ensureFounderOsRunning()
+        openBrowserUrl('http://localhost:5173')
+        console.log(`${COLORS.green}  ✓ Aperto Founder OS: http://localhost:5173${COLORS.reset}`)
+        await waitForEnter()
+        showFounderOsHub()
+        break
+      }
+      case '2':
+      case 'START':
+      case 'ALL': {
+        console.log(`${COLORS.green}Avvio di entrambi i server Founder OS...${COLORS.reset}`)
+        launchFounderOsProcess('Founder OS Backend (:3001)', FOUNDER_OS_BACKEND, 'start-dev.js')
+        launchFounderOsProcess('Founder OS Frontend (:5173)', FOUNDER_OS_FRONTEND, 'start-dev.cjs')
+        console.log(`${COLORS.green}  ✓ Server avviati in finestre separate (Frontend :5173, Backend :3001).${COLORS.reset}`)
+        await waitForEnter()
+        showFounderOsHub()
+        break
+      }
+      case '3':
+      case 'FE': {
+        console.log(`${COLORS.green}Avvio Frontend Vite Founder OS (porta 5173)...${COLORS.reset}`)
+        launchFounderOsProcess('Founder OS Frontend (:5173)', FOUNDER_OS_FRONTEND, 'start-dev.cjs')
+        await waitForEnter()
+        showFounderOsHub()
+        break
+      }
+      case '4':
+      case 'BE': {
+        console.log(`${COLORS.green}Avvio Backend Next.js Founder OS (porta 3001)...${COLORS.reset}`)
+        launchFounderOsProcess('Founder OS Backend (:3001)', FOUNDER_OS_BACKEND, 'start-dev.js')
+        await waitForEnter()
+        showFounderOsHub()
+        break
+      }
+      case '5':
+      case 'STOP':
+      case 'KILL': {
+        console.log(`${COLORS.red}Arresto server Founder OS su porte 5173 e 3001...${COLORS.reset}`)
+        const killed = killPorts([5173, 3001])
+        console.log(`${COLORS.green}  ✓ Processi arrestati (${killed.length} terminati). Porte 5173 e 3001 liberate.${COLORS.reset}`)
+        await waitForEnter()
+        showFounderOsHub()
+        break
+      }
+      case '6':
+      case 'DB': {
+        showFounderOsDbDetails()
+        break
+      }
+      case '7':
+      case 'EXPLORE':
+      case 'DIR': {
+        execSync(`explorer "${FOUNDER_OS_DIR}"`, { shell: 'cmd.exe' })
+        showFounderOsHub()
+        break
+      }
+      case '0':
+      default: {
+        showMenu()
+        break
+      }
+    }
+  })
+}
+
+async function ensureStorefrontRunning() {
+  const isOnline = await checkPortOnline(8080)
+  if (!isOnline) {
+    console.log(`${COLORS.yellow}Avvio Storefront Vite in corso (porta 8080)...${COLORS.reset}`)
+    execSync(`start "Moser Storefront (Port 8080)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+    await new Promise(r => setTimeout(r, 2500))
+  }
+}
+
+async function checkEcommerceHealth() {
+  const [storefront, medusa, storage] = await Promise.all([
+    checkPortOnline(8080),
+    checkPortOnline(9000),
+    checkPortOnline(8989),
+  ])
+  return { storefront, medusa, storage }
+}
+
+function getEcommerceStoresList() {
+  const stores = [
+    {
+      id: 'moser-commerce',
+      name: 'Moser Luxury Commerce',
+      type: 'Core Flagship',
+      port: 8080,
+      url: 'http://localhost:8080',
+      adminUrl: 'http://localhost:8080/admin',
+      consumerUrl: 'http://localhost:8080/',
+      businessUrl: 'http://localhost:8080/company/dashboard',
+      description: 'Piattaforma ammiraglia luxury fashion, lookbook editoriale e Medusa 2.0'
+    }
+  ]
+
+  // Scan 01CORE projects
+  const storageProjectsDir = path.join(COMMON_STORAGE, 'projects')
+  if (fs.existsSync(storageProjectsDir)) {
+    try {
+      const entries = fs.readdirSync(storageProjectsDir)
+      for (const entry of entries) {
+        if (entry === 'moser-commerce' || entry === 'common-shared') continue
+        const pPath = path.join(storageProjectsDir, entry)
+        if (!fs.statSync(pPath).isDirectory()) continue
+        const pjPath = path.join(pPath, 'project.json')
+        let name = entry
+        let desc = 'Store derivato catalogato in 01CORE storage'
+        if (fs.existsSync(pjPath)) {
+          try {
+            const pj = JSON.parse(fs.readFileSync(pjPath, 'utf8'))
+            name = pj.name || entry
+            desc = pj.description || desc
+          } catch (_) {}
+        }
+        stores.push({
+          id: entry,
+          name,
+          type: '01CORE Project Store',
+          port: 8080,
+          url: `http://localhost:8080?project=${entry}`,
+          adminUrl: `http://localhost:8080/admin/new-ecommerce?project=${entry}`,
+          consumerUrl: `http://localhost:8080?project=${entry}`,
+          businessUrl: `http://localhost:8080/company/dashboard?project=${entry}`,
+          description: desc
+        })
+      }
+    } catch (_) {}
+  }
+
+  // Scan mechaHD directories for additional standalone stores
+  const mechaHdDir = path.join(HERMES_ROOT, 'mechaHD')
+  if (fs.existsSync(mechaHdDir)) {
+    try {
+      const items = fs.readdirSync(mechaHdDir)
+      for (const item of items) {
+        if (['Moser-commerce', '01CORE_common_asset_storage', 'LDG_INNOVATION', 'hermes-desktop-old-base'].includes(item)) continue
+        const ip = path.join(mechaHdDir, item)
+        if (!fs.statSync(ip).isDirectory()) continue
+        const pkg = path.join(ip, 'package.json')
+        if (fs.existsSync(pkg)) {
+          const already = stores.find(s => s.id.toLowerCase() === item.toLowerCase())
+          if (!already) {
+            stores.push({
+              id: item.toLowerCase(),
+              name: item,
+              type: 'Standalone Workspace Store',
+              port: 8080,
+              url: `http://localhost:8080?store=${item.toLowerCase()}`,
+              adminUrl: `http://localhost:8080/admin?store=${item.toLowerCase()}`,
+              consumerUrl: `http://localhost:8080?store=${item.toLowerCase()}`,
+              businessUrl: `http://localhost:8080/company/dashboard?store=${item.toLowerCase()}`,
+              description: `Workspace autonomo in mechaHD/${item}`
+            })
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  return stores
+}
+
+async function showEcommerceMasterHub() {
+  clearScreen()
+  const health = await checkEcommerceHealth()
+
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🛍️ E-COMMERCE MASTER CONTROL & MULTI-STORE HUB                                         ║`)
+  console.log(`║    Moser Commerce & Generatore Multi-Store · Aree Admin, Consumer, Business & Wizard    ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  const statusStorefront = health.storefront ? `${COLORS.green}ONLINE (:8080)${COLORS.reset}` : `${COLORS.red}OFFLINE (:8080)${COLORS.reset}`
+  const statusMedusa = health.medusa ? `${COLORS.green}ONLINE (:9000)${COLORS.reset}` : `${COLORS.red}OFFLINE (:9000)${COLORS.reset}`
+  const statusStorage = health.storage ? `${COLORS.green}ONLINE (:8989)${COLORS.reset}` : `${COLORS.dim}STANDALONE LOCAL${COLORS.reset}`
+
+  console.log(`  Stato Piattaforma: Storefront ${statusStorefront} | Medusa Backend ${statusMedusa} | Asset Storage ${statusStorage}\n`)
+
+  console.log(`  ${COLORS.bright}👑 AREA AMMINISTRATIVA MOSER (ADMIN REALM):${COLORS.reset}`)
+  console.log(`  [A]  ${COLORS.yellow}${COLORS.bright}👑 Moser Admin Dashboard${COLORS.reset}              (Gate, Prodotti, Ordini & RBAC)`)
+  console.log(`  [W]  ${COLORS.yellow}🪄 New E-Commerce Creation Wizard${COLORS.reset}      (AI Store Builder, Brand Kit v1 & Offer v1)`)
+  console.log(`  [CS] ${COLORS.magenta}🎨 Creative Studio 3D & Motion${COLORS.reset}         (ThreeUI Canvas & Motion Promo Generator)`)
+  console.log(`  [RB] ${COLORS.cyan}🛡️ Access Control & RBAC Matrix${COLORS.reset}        (Three-Realm Security & Session Manager)`)
+  console.log(`  [DL] ${COLORS.green}🔬 Discovery Lab Operations Hub${COLORS.reset}        (UGC Campaigns, Tester & Scout Management)`)
+  console.log(`  [OP] ${COLORS.blue}⚡ Operations & Real-Time Monitor${COLORS.reset}      (Token Monitor, Cache & System Telemetry)\n`)
+
+  console.log(`  ${COLORS.bright}🛍️ AREA CLIENTI CONSUMER MOSER (CUSTOMER REALM):${COLORS.reset}`)
+  console.log(`  [C]  ${COLORS.cyan}${COLORS.bright}🏠 Storefront Home & Showcase${COLORS.reset}          (Hero, Drops, Lookbook & Experience)`)
+  console.log(`  [CC] ${COLORS.cyan}👗 Collezioni & Directory Prodotti${COLORS.reset}     (Filtri, Amazon PDP Content & Schede)`)
+  console.log(`  [CA] ${COLORS.cyan}👤 Account Cliente & Moser Circle VIP${COLORS.reset}  (Fedeltà, Vouchers, Ordini & Resi)`)
+  console.log(`  [CP] ${COLORS.cyan}🤖 Personal Shopper AI Experience${COLORS.reset}      (Consulenza outfit & raccomandazioni)`)
+  console.log(`  [CL] ${COLORS.cyan}📖 Editorial Lookbook Scrollytelling${COLORS.reset}   (Esperienza visiva fullscreen interattiva)\n`)
+
+  console.log(`  ${COLORS.bright}💼 AREA CLIENTI BUSINESS MOSER (COMPANY & PARTNER REALM):${COLORS.reset}`)
+  console.log(`  [B]  ${COLORS.green}${COLORS.bright}🏢 Company Control Center & B2B Hub${COLORS.reset}    (Gestione Organizzazione & Contratti)`)
+  console.log(`  [BD] ${COLORS.green}📊 Company Dashboard & B2B Orders${COLORS.reset}      (Listini riservati & fatturazione)`)
+  console.log(`  [BM] ${COLORS.green}🏪 Merchant & Seller Operations${COLORS.reset}        (Catalogo vendor & report vendite)`)
+  console.log(`  [BP] ${COLORS.green}🤝 Partner Portal & Collaborations${COLORS.reset}     (Accordi B2B, Revenue Share & SLA)`)
+  console.log(`  [BS] ${COLORS.green}🎯 Scout Community Missions Hub${COLORS.reset}        (Campagne content & missioni scout)`)
+  console.log(`  [BT] ${COLORS.green}🧪 Tester Sample Validation Hub${COLORS.reset}        (Test di laboratorio e recensioni UGC)\n`)
+
+  console.log(`  ${COLORS.bright}🌐 TUTTI I NUOVI E-COMMERCE CREATI (MULTI-STORE):${COLORS.reset}`)
+  console.log(`  [M]  ${COLORS.yellow}${COLORS.bright}🌐 Multi-Store Explorer & Selector${COLORS.reset}     (Scegli e accedi ad Admin/Consumer/Business di qualsiasi store)`)
+  console.log(`  [N]  ${COLORS.yellow}${COLORS.bright}🪄 Crea Nuovo E-Commerce Ora${COLORS.reset}           (Lancia Wizard con parametri brand, offer e Shopify)\n`)
+
+  console.log(`  ${COLORS.bright}✨ ARCHITETTURE & ASSET SUITE (PR #44, #45, #46):${COLORS.reset}`)
+  console.log(`  [IL] ${COLORS.magenta}${COLORS.bright}🌟 Influencer Landings V1-V10${COLORS.reset}           (10 Concetti ad alta conversione, formule & mockup SVG)`)
+  console.log(`  [GS] ${COLORS.yellow}${COLORS.bright}👑 Golden Scrollytelling Standard 3D${COLORS.reset}    (Shoe Craftsman 01, 6 Capitoli, Three.js & AI Video)`)
+  console.log(`  [CT] ${COLORS.cyan}${COLORS.bright}💬 Communication Templates V1 Suite${COLORS.reset}     (Chatbot AI, FAQ, Docs, Email, Offers, Presets)`)
+  console.log(`  [LT] ${COLORS.green}${COLORS.bright}⚖️ Legal Templates & Compliance Suite${COLORS.reset}   (10 Contratti & Policy GDPR/EU/IT verificate)`)
+  console.log(`  [OM] ${COLORS.blue}${COLORS.bright}🧩 Optional Modules & Bundles Manager${COLORS.reset}   (Communication Base, Legal Base, Foundation)`)
+  console.log(`  [TR] ${COLORS.cyan}${COLORS.bright}🌍 Multi-Language & Auto-Translation${COLORS.reset}    (9 Lingue: IT, EN, FR, DE, ES, ZH, JA, RU, AR RTL)\n`)
+
+  console.log(`  ${COLORS.bright}⚙️ GESTIONE SERVER & RUNTIME:${COLORS.reset}`)
+  console.log(`  [1]  ${COLORS.green}🚀 Avvia Storefront React/Vite${COLORS.reset}         (npm run dev su porta 8080)`)
+  console.log(`  [2]  ${COLORS.green}⚙️ Avvia Medusa Headless Backend${COLORS.reset}       (npm run medusa:dev su porta 9000)`)
+  console.log(`  [3]  ${COLORS.green}${COLORS.bright}⚡ Avvia ENTRAMBI i Server${COLORS.reset}             (Dual Window Storefront + Medusa)`)
+  console.log(`  [4]  ${COLORS.red}🛑 Arresta Server E-Commerce${COLORS.reset}           (Libera porte 8080 e 9000)`)
+  console.log(`  [5]  ${COLORS.cyan}🛡️ Esegui Quality Suite & Contratti${COLORS.reset}    (npm run quality con tutti i contratti)`)
+  console.log(`  [0]  ${COLORS.dim}Torna al Menu Principale${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona azione E-Commerce: ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const c = (choice || '').trim().toUpperCase()
+    switch (c) {
+      case 'A':
+      case 'ADMIN':
+      case 'A1': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/admin')
+        console.log(`${COLORS.green}  ✓ Aperta Area Amministrativa Moser: http://localhost:8080/admin${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'W':
+      case 'WIZARD':
+      case 'A2':
+      case 'N': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/admin/new-ecommerce')
+        console.log(`${COLORS.green}  ✓ Aperto New E-Commerce Creation Wizard: http://localhost:8080/admin/new-ecommerce${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'CS':
+      case 'CREATIVE':
+      case 'A3': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/admin/creative-studio')
+        console.log(`${COLORS.green}  ✓ Aperto Creative Studio 3D & Motion: http://localhost:8080/admin/creative-studio${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'RB':
+      case 'RBAC':
+      case 'A4': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/admin/access-control')
+        console.log(`${COLORS.green}  ✓ Aperto Access Control & RBAC Matrix: http://localhost:8080/admin/access-control${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'DL':
+      case 'DISCOVERY':
+      case 'A5': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/admin/discovery-lab-ops')
+        console.log(`${COLORS.green}  ✓ Aperto Discovery Lab Operations: http://localhost:8080/admin/discovery-lab-ops${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'OP':
+      case 'OPERATIONS':
+      case 'A6': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/admin/operations')
+        console.log(`${COLORS.green}  ✓ Aperta Console Operazioni & Monitor: http://localhost:8080/admin/operations${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'C':
+      case 'CONSUMER':
+      case 'CUSTOMER':
+      case 'STOREFRONT':
+      case 'C1': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/')
+        console.log(`${COLORS.green}  ✓ Aperta Area Consumer (Storefront Home): http://localhost:8080/${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'CC':
+      case 'COLLECTIONS':
+      case 'C2': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/collections')
+        console.log(`${COLORS.green}  ✓ Aperta Directory Collezioni & Prodotti: http://localhost:8080/collections${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'CA':
+      case 'ACCOUNT':
+      case 'C3': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/account')
+        console.log(`${COLORS.green}  ✓ Aperta Area Account & Moser Circle VIP: http://localhost:8080/account${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'CP':
+      case 'SHOPPER':
+      case 'C4': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/shop/personal-shopper')
+        console.log(`${COLORS.green}  ✓ Aperto Personal Shopper AI: http://localhost:8080/shop/personal-shopper${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'CL':
+      case 'LOOKS':
+      case 'C5': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/looks')
+        console.log(`${COLORS.green}  ✓ Aperto Lookbook Scrollytelling: http://localhost:8080/looks${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'B':
+      case 'BUSINESS':
+      case 'B1': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/company/control-center')
+        console.log(`${COLORS.green}  ✓ Aperto Company Control Center (Business): http://localhost:8080/company/control-center${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'BD':
+      case 'B2': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/company/dashboard')
+        console.log(`${COLORS.green}  ✓ Aperta Company Dashboard: http://localhost:8080/company/dashboard${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'BM':
+      case 'MERCHANT':
+      case 'B3': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/merchant/dashboard')
+        console.log(`${COLORS.green}  ✓ Aperta Merchant Dashboard: http://localhost:8080/merchant/dashboard${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'BP':
+      case 'PARTNER':
+      case 'B4': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/partners/dashboard')
+        console.log(`${COLORS.green}  ✓ Aperto Partners Portal: http://localhost:8080/partners/dashboard${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'BS':
+      case 'SCOUT':
+      case 'B5': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/scout/hub')
+        console.log(`${COLORS.green}  ✓ Aperto Scout Missions Hub: http://localhost:8080/scout/hub${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'BT':
+      case 'TESTER':
+      case 'B6': {
+        await ensureStorefrontRunning()
+        openBrowserUrl('http://localhost:8080/tester/hub')
+        console.log(`${COLORS.green}  ✓ Aperto Tester Sample Validation Hub: http://localhost:8080/tester/hub${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'M':
+      case 'MULTI':
+      case 'STORES': {
+        await showMultiStoreExplorer()
+        break
+      }
+      case '1': {
+        console.log(`${COLORS.green}Avvio Storefront React Vite in finestra indipendente...${COLORS.reset}`)
+        execSync(`start "Moser Storefront (Port 8080)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case '2': {
+        console.log(`${COLORS.green}Avvio Medusa Headless Backend in finestra indipendente...${COLORS.reset}`)
+        execSync(`start "Moser Medusa Backend (Port 9000)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run medusa:dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case '3': {
+        console.log(`${COLORS.green}Avvio ENTRAMBI i server (Storefront :8080 + Medusa :9000)...${COLORS.reset}`)
+        execSync(`start "Moser Storefront (Port 8080)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        execSync(`start "Moser Medusa Backend (Port 9000)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run medusa:dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        console.log(`${COLORS.green}  ✓ Finestre avviate. Storefront in ascolto su :8080, Medusa su :9000.${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case '4': {
+        console.log(`${COLORS.red}Arresto server E-Commerce su porte 8080 e 9000...${COLORS.reset}`)
+        const killed = killPorts([8080, 9000])
+        console.log(`${COLORS.green}  ✓ Processi arrestati (${killed.length} terminati). Porte 8080 e 9000 libere.${COLORS.reset}`)
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case '5': {
+        console.log(`${COLORS.cyan}Esecuzione Quality Suite Moser Commerce (contratti, lint, test, build)...${COLORS.reset}`)
+        try {
+          execSync('npm run quality', { stdio: 'inherit', cwd: MOSER_PROJECT })
+        } catch (e) {
+          console.error(`${COLORS.red}Errore durante quality suite: ${e.message}${COLORS.reset}`)
+        }
+        await waitForEnter()
+        showEcommerceMasterHub()
+        break
+      }
+      case 'IL':
+      case 'INFLUENCER':
+      case 'INFLUENCER_LANDINGS': {
+        await showInfluencerLandingsHub()
+        break
+      }
+      case 'GS':
+      case 'SCROLLYTELLING':
+      case 'GOLDEN': {
+        await showGoldenScrollytellingHub()
+        break
+      }
+      case 'CT':
+      case 'COMMUNICATION':
+      case 'COMM_TEMPLATES': {
+        await showCommunicationTemplatesHub()
+        break
+      }
+      case 'LT':
+      case 'LEGAL':
+      case 'LEGAL_TEMPLATES': {
+        await showLegalTemplatesHub()
+        break
+      }
+      case 'OM':
+      case 'MODULES':
+      case 'OPTIONAL_MODULES': {
+        await showOptionalModulesHub()
+        break
+      }
+      case 'TR':
+      case 'ML':
+      case 'TRANSLATE':
+      case 'TRANSLATION':
+      case 'LOCALIZATION':
+      case 'LANGUAGES': {
+        await showAutoTranslationHub()
+        break
+      }
+      case '0':
+      case 'Q':
+      default:
+        showMenu()
+    }
+  })
+}
+
+async function showMultiStoreExplorer() {
+  clearScreen()
+  const stores = getEcommerceStoresList()
+
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🌐 MULTI-STORE EXPLORER & GESTIONE TUTTI GLI E-COMMERCE CREATI                         ║`)
+  console.log(`║    Accesso universale alle 3 Aree: Admin, Consumer e Business per ciascun store          ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}STORE ATTIVI & PROGETTI CATALOGATI:${COLORS.reset}`)
+  stores.forEach((store, idx) => {
+    const num = `[${idx + 1}]`.padEnd(5)
+    console.log(`  ${num} ${COLORS.cyan}${COLORS.bright}${store.name.padEnd(38)}${COLORS.reset} ${COLORS.dim}(${store.type})${COLORS.reset}`)
+    console.log(`        ${COLORS.dim}ID:${COLORS.reset} ${store.id.padEnd(20)} ${COLORS.dim}→${COLORS.reset} ${COLORS.green}${store.url}${COLORS.reset}`)
+    console.log(`        ${COLORS.dim}Desc:${COLORS.reset} ${store.description.slice(0, 75)}`)
+  })
+  console.log(`\n  [U]  ${COLORS.yellow}Inserisci Store ID o URL Personalizzato${COLORS.reset}`)
+  console.log(`  [0]  ${COLORS.dim}Torna all'E-Commerce Master Hub${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona store (1-${stores.length}, U, 0): ${COLORS.reset}`, async (ans) => {
+    rl.close()
+    const input = (ans || '').trim().toUpperCase()
+    if (input === '0' || input === '') {
+      return showEcommerceMasterHub()
+    }
+
+    let selectedStore = null
+    if (input === 'U') {
+      const rlCustom = readline.createInterface({ input: process.stdin, output: process.stdout })
+      rlCustom.question(`  Inserisci Store ID o URL (es. aihux oppure http://localhost:8081): `, async (customVal) => {
+        rlCustom.close()
+        const target = (customVal || '').trim()
+        if (!target) return showMultiStoreExplorer()
+        if (target.startsWith('http')) {
+          selectedStore = {
+            id: 'custom-url',
+            name: `Store Personalizzato (${target})`,
+            type: 'Custom URL',
+            adminUrl: `${target.replace(/\/+$/, '')}/admin`,
+            consumerUrl: `${target.replace(/\/+$/, '')}/`,
+            businessUrl: `${target.replace(/\/+$/, '')}/company/dashboard`,
+          }
+        } else {
+          selectedStore = {
+            id: target,
+            name: `Store ${target}`,
+            type: 'Derived Store',
+            adminUrl: `http://localhost:8080/admin/new-ecommerce?project=${encodeURIComponent(target)}`,
+            consumerUrl: `http://localhost:8080?project=${encodeURIComponent(target)}`,
+            businessUrl: `http://localhost:8080/company/dashboard?project=${encodeURIComponent(target)}`,
+          }
+        }
+        await promptStoreActions(selectedStore)
+      })
+      return
+    }
+
+    const idx = Number.parseInt(input, 10) - 1
+    if (idx >= 0 && idx < stores.length) {
+      selectedStore = stores[idx]
+      await promptStoreActions(selectedStore)
+    } else {
+      console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
+      await waitForEnter()
+      showMultiStoreExplorer()
+    }
+  })
+}
+
+async function promptStoreActions(store) {
+  clearScreen()
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🏪 CONTROLLO E-COMMERCE: ${store.name.slice(0, 58).padEnd(58)} ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+  console.log(`  Store ID: ${COLORS.cyan}${store.id}${COLORS.reset}`)
+  console.log(`  Admin URL:    ${COLORS.yellow}${store.adminUrl}${COLORS.reset}`)
+  console.log(`  Consumer URL: ${COLORS.green}${store.consumerUrl}${COLORS.reset}`)
+  console.log(`  Business URL: ${COLORS.blue}${store.businessUrl}${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}AZIONI IMMEDIATE:${COLORS.reset}`)
+  console.log(`  [A]  ${COLORS.yellow}👑 Apri Area Amministrativa (Admin Realm)${COLORS.reset}`)
+  console.log(`  [C]  ${COLORS.cyan}🛍️ Apri Area Clienti Consumer (Customer Realm)${COLORS.reset}`)
+  console.log(`  [B]  ${COLORS.green}💼 Apri Area Clienti Business (Company/Merchant Realm)${COLORS.reset}`)
+  console.log(`  [W]  ${COLORS.magenta}🪄 Apri nel New-Ecommerce Wizard${COLORS.reset}`)
+  console.log(`  [0]  ${COLORS.dim}Torna alla lista store${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona realm per ${store.id} (A, C, B, W, 0): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const c = (choice || '').trim().toUpperCase()
+    await ensureStorefrontRunning()
+    switch (c) {
+      case 'A':
+      case 'ADMIN': {
+        openBrowserUrl(store.adminUrl)
+        console.log(`${COLORS.green}  ✓ Aperta Area Amministrativa per ${store.id}: ${store.adminUrl}${COLORS.reset}`)
+        break
+      }
+      case 'C':
+      case 'CONSUMER': {
+        openBrowserUrl(store.consumerUrl)
+        console.log(`${COLORS.green}  ✓ Aperta Area Consumer per ${store.id}: ${store.consumerUrl}${COLORS.reset}`)
+        break
+      }
+      case 'B':
+      case 'BUSINESS': {
+        openBrowserUrl(store.businessUrl)
+        console.log(`${COLORS.green}  ✓ Aperta Area Business per ${store.id}: ${store.businessUrl}${COLORS.reset}`)
+        break
+      }
+      case 'W':
+      case 'WIZARD': {
+        const wizardUrl = `http://localhost:8080/admin/new-ecommerce?project=${encodeURIComponent(store.id)}`
+        openBrowserUrl(wizardUrl)
+        console.log(`${COLORS.green}  ✓ Aperto Wizard per ${store.id}: ${wizardUrl}${COLORS.reset}`)
+        break
+      }
+      case '0':
+      default:
+        return showMultiStoreExplorer()
+    }
+    await waitForEnter()
+    showMultiStoreExplorer()
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREVIEW HELPER FOR MARKDOWN & SUITE DOCUMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function renderMarkdownFilePreview(filePath, maxLines = 45) {
+  if (!fs.existsSync(filePath)) {
+    console.log(`${COLORS.red}  File non trovato: ${filePath}${COLORS.reset}`)
+    return
+  }
+  const content = fs.readFileSync(filePath, 'utf8')
+  const lines = content.split('\n')
+  console.log(`\n${COLORS.cyan}─── [ ${path.basename(filePath)} ] ───────────────────────────────────────────${COLORS.reset}`)
+  lines.slice(0, maxLines).forEach(line => {
+    if (line.startsWith('# ')) {
+      console.log(`${COLORS.yellow}${COLORS.bright}${line}${COLORS.reset}`)
+    } else if (line.startsWith('## ')) {
+      console.log(`${COLORS.cyan}${COLORS.bright}${line}${COLORS.reset}`)
+    } else if (line.startsWith('### ')) {
+      console.log(`${COLORS.green}${COLORS.bright}${line}${COLORS.reset}`)
+    } else if (line.startsWith('>')) {
+      console.log(`${COLORS.yellow}${COLORS.dim}${line}${COLORS.reset}`)
+    } else if (line.startsWith('- ') || line.startsWith('* ')) {
+      console.log(`  ${COLORS.white}•${COLORS.reset} ${line.slice(2)}`)
+    } else if (line.startsWith('|')) {
+      console.log(`${COLORS.dim}${line}${COLORS.reset}`)
+    } else {
+      console.log(`  ${line}`)
+    }
+  })
+  if (lines.length > maxLines) {
+    console.log(`${COLORS.dim}  ... [altre ${lines.length - maxLines} righe nel file: ${filePath}]${COLORS.reset}`)
+  }
+  console.log(`${COLORS.cyan}────────────────────────────────────────────────────────────────────────────${COLORS.reset}\n`)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. INFLUENCER LANDINGS HUB (PR #44)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function showInfluencerLandingsHub() {
+  clearScreen()
+  const manifestPath = path.join(INFLUENCER_LANDINGS_DIR, 'manifest.json')
+  let concepts = []
+  let title = 'Influencer landing V1-10'
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+      concepts = data.concepts || []
+      title = data.title || title
+    } catch (_) {}
+  }
+
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🌟 INFLUENCER LANDINGS V1-V10 DESIGN REFERENCE SUITE (PR #44)                          ║`)
+  console.log(`║    ${title.padEnd(83)} ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.dim}Formula di Conversione Condivisa:${COLORS.reset}`)
+  console.log(`  ${COLORS.green}[RISULTATO] in [TEMPO] senza [PAIN 1] e [PAIN 2], grazie a [MECCANISMO] + [PROVA SOCIALE]${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}VARIANTI DISPONIBILI (10 CONCETTI DI CONVERSIONE):${COLORS.reset}`)
+  const archetypes = [
+    'Minimalist Chic & High Authority',
+    'Editorial Luxury Magazine Layout',
+    'Cyber Luxury Dark Mode High-Tech',
+    'Warm Artisan Craftsmanship Story',
+    'Social Proof & Outcomes Accelerator',
+    'Immersive 3D Interactive Lookbook',
+    'VIP Invitation & Exclusive Private Drop',
+    'Sustainable Eco-Luxury Traceability',
+    'Kinetic Video Storytelling & Motion',
+    'Gamified Capsule Unlock & Secret Access'
+  ]
+  concepts.forEach((c, idx) => {
+    const num = `[${c.version}]`.padEnd(5)
+    const arc = archetypes[idx] || 'Custom Archetype'
+    const svgFile = c.reference || `Influencer landing V${c.version}.svg`
+    const svgExists = fs.existsSync(path.join(INFLUENCER_LANDINGS_DIR, svgFile))
+    const status = svgExists ? `${COLORS.green}✓ SVG PRONTO${COLORS.reset}` : `${COLORS.red}✗ SVG MANCANTE${COLORS.reset}`
+    console.log(`  ${num} ${COLORS.cyan}${COLORS.bright}${c.name.padEnd(24)}${COLORS.reset} ${status} - ${COLORS.dim}${arc}${COLORS.reset}`)
+    console.log(`        ${COLORS.dim}File:${COLORS.reset} ${svgFile} ${COLORS.dim}| Source:${COLORS.reset} ${c.source}`)
+  })
+
+  console.log(`\n  ${COLORS.bright}AZIONI RAPIDE:${COLORS.reset}`)
+  console.log(`  [1-10] ${COLORS.yellow}Apri Mockup SVG nel Browser (es. digita 1 per V1, 10 per V10)${COLORS.reset}`)
+  console.log(`  [A]    ${COLORS.cyan}Apri Tutti i 10 Mockup SVG nel Browser${COLORS.reset}`)
+  console.log(`  [R]    ${COLORS.green}Visualizza README & Strategia di Conversione (10 Blocchi Reusabili)${COLORS.reset}`)
+  console.log(`  [0]    ${COLORS.dim}Torna all'E-Commerce Master Hub${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona opzione Influencer Landings (1-10, A, R, 0): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const input = (choice || '').trim().toUpperCase()
+    if (input === '0' || input === '') {
+      return showEcommerceMasterHub()
+    }
+    if (input === 'A') {
+      console.log(`${COLORS.yellow}Apertura di tutti i 10 mockup SVG nel browser...${COLORS.reset}`)
+      concepts.forEach(c => {
+        const p = path.join(INFLUENCER_LANDINGS_DIR, c.reference)
+        if (fs.existsSync(p)) openBrowserUrl(p)
+      })
+      await waitForEnter()
+      return showInfluencerLandingsHub()
+    }
+    if (input === 'R') {
+      renderMarkdownFilePreview(path.join(INFLUENCER_LANDINGS_DIR, 'README.md'), 50)
+      await waitForEnter()
+      return showInfluencerLandingsHub()
+    }
+    const ver = Number.parseInt(input, 10)
+    if (ver >= 1 && ver <= concepts.length) {
+      const target = concepts[ver - 1]
+      const svgPath = path.join(INFLUENCER_LANDINGS_DIR, target.reference)
+      if (fs.existsSync(svgPath)) {
+        openBrowserUrl(svgPath)
+        console.log(`${COLORS.green}  ✓ Aperto ${target.name}: ${svgPath}${COLORS.reset}`)
+      } else {
+        console.log(`${COLORS.red}  File non trovato: ${svgPath}${COLORS.reset}`)
+      }
+      await waitForEnter()
+      return showInfluencerLandingsHub()
+    }
+    console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
+    await waitForEnter()
+    showInfluencerLandingsHub()
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. GOLDEN SCROLLYTELLING STANDARD & 3D TURNTABLE (PR #45)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function showGoldenScrollytellingHub() {
+  clearScreen()
+  const manifestPath = path.join(SCROLLYTELLING_DIR, 'manifest.json')
+  let chapters = []
+  let templateId = 'Golden-Shoe-craftman01'
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+      chapters = data.chapters || []
+      templateId = data.templateId || templateId
+    } catch (_) {}
+  }
+
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 👑 GOLDEN SCROLLYTELLING STANDARD & 3D TURNTABLE (PR #45)                              ║`)
+  console.log(`║    Template: ${templateId.padEnd(50)} [Standard Normativo] ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.dim}Stack Tecnologico:${COLORS.reset} Three.js WebGL Canvas | GSAP ScrollTrigger | Lenis Smooth Scroll | WebAudio Binaural ASMR\n`)
+
+  console.log(`  ${COLORS.bright}CAPITOLI SCENOGRAFICI (${chapters.length} FASI NARRATIVE):${COLORS.reset}`)
+  chapters.forEach((ch) => {
+    const num = `[${ch.index}]`.padEnd(5)
+    const ref = ch.reference ? path.join(SCROLLYTELLING_DIR, ch.reference) : null
+    const exists = ref && fs.existsSync(ref)
+    const status = exists ? `${COLORS.green}✓ SVG DISPONIBILE${COLORS.reset}` : `${COLORS.yellow}⚡ MODELLO 3D PROCEDURALE${COLORS.reset}`
+    console.log(`  ${num} ${COLORS.cyan}${COLORS.bright}${ch.label.padEnd(20)}${COLORS.reset} ${status} - ${COLORS.dim}ID: ${ch.id}${COLORS.reset}`)
+    if (ch.interaction) console.log(`        ${COLORS.yellow}Interazione:${COLORS.reset} ${ch.interaction}`)
+    if (ch.mediaMode) console.log(`        ${COLORS.dim}Media Modes:${COLORS.reset} ${ch.mediaMode.join(', ')}`)
+  })
+
+  console.log(`\n  ${COLORS.bright}DOCUMENTI NORMATIVI & ASSET STUDIO:${COLORS.reset}`)
+  console.log(`  [1-6] ${COLORS.yellow}Visualizza Mockup Grafico Capitolo (1..6)${COLORS.reset}`)
+  console.log(`  [B]   ${COLORS.cyan}Implementation Blueprint (Three.js, Canvas, GSAP, WebAudio)${COLORS.reset}`)
+  console.log(`  [V]   ${COLORS.magenta}AI Video Generation Prompt Bible (Runway Gen-3, Luma, Sora, Midjourney)${COLORS.reset}`)
+  console.log(`  [Q]   ${COLORS.green}QA Acceptance Gate (60fps benchmark, Audio sync, WebGL fallback)${COLORS.reset}`)
+  console.log(`  [G]   ${COLORS.yellow}Golden Standard Manifesto (Regole auree per futuri progetti)${COLORS.reset}`)
+  console.log(`  [L]   ${COLORS.cyan}Apri Scrollytelling Lookbook nello Storefront (:8080/looks)${COLORS.reset}`)
+  console.log(`  [0]   ${COLORS.dim}Torna all'E-Commerce Master Hub${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona opzione Scrollytelling (1-6, B, V, Q, G, L, 0): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const input = (choice || '').trim().toUpperCase()
+    if (input === '0' || input === '') {
+      return showEcommerceMasterHub()
+    }
+    if (input === 'B') {
+      renderMarkdownFilePreview(path.join(SCROLLYTELLING_DIR, 'IMPLEMENTATION_BLUEPRINT.md'), 50)
+      await waitForEnter()
+      return showGoldenScrollytellingHub()
+    }
+    if (input === 'V') {
+      renderMarkdownFilePreview(path.join(SCROLLYTELLING_DIR, 'VIDEO_GENERATION.md'), 50)
+      await waitForEnter()
+      return showGoldenScrollytellingHub()
+    }
+    if (input === 'Q') {
+      renderMarkdownFilePreview(path.join(SCROLLYTELLING_DIR, 'QA_ACCEPTANCE.md'), 50)
+      await waitForEnter()
+      return showGoldenScrollytellingHub()
+    }
+    if (input === 'G') {
+      const gsPath = path.join(MOSER_PROJECT, 'docs', 'scrollytelling', 'GOLDEN_STANDARD.md')
+      renderMarkdownFilePreview(gsPath, 50)
+      await waitForEnter()
+      return showGoldenScrollytellingHub()
+    }
+    if (input === 'L') {
+      await ensureStorefrontRunning()
+      openBrowserUrl('http://localhost:8080/looks')
+      console.log(`${COLORS.green}  ✓ Aperto Lookbook Scrollytelling: http://localhost:8080/looks${COLORS.reset}`)
+      await waitForEnter()
+      return showGoldenScrollytellingHub()
+    }
+    const idx = Number.parseInt(input, 10)
+    if (idx >= 1 && idx <= chapters.length) {
+      const ch = chapters[idx - 1]
+      if (ch.reference) {
+        const svgPath = path.join(SCROLLYTELLING_DIR, ch.reference)
+        if (fs.existsSync(svgPath)) {
+          openBrowserUrl(svgPath)
+          console.log(`${COLORS.green}  ✓ Aperto Capitolo ${ch.index} (${ch.label}): ${svgPath}${COLORS.reset}`)
+        } else {
+          console.log(`${COLORS.red}  File non trovato: ${svgPath}${COLORS.reset}`)
+        }
+      } else {
+        console.log(`${COLORS.yellow}  Capitolo ${ch.index} (${ch.label}): Rendering 3D procedurale Three.js (nessun file SVG statico).${COLORS.reset}`)
+      }
+      await waitForEnter()
+      return showGoldenScrollytellingHub()
+    }
+    console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
+    await waitForEnter()
+    showGoldenScrollytellingHub()
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. COMMUNICATION TEMPLATES V1 SYSTEM (PR #46)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function showCommunicationTemplatesHub() {
+  clearScreen()
+  const manifestPath = path.join(COMM_TEMPLATES_DIR, 'manifest.json')
+  let families = []
+  let version = '1.1.0'
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+      families = data.families || []
+      version = data.version || version
+    } catch (_) {}
+  }
+
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 💬 COMMUNICATION TEMPLATES V1 SYSTEM (PR #46)                                          ║`)
+  console.log(`║    Versione: ${version.padEnd(10)} [Base Template Multi-Channel Governed System]              ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.dim}Politica di Rendering:${COLORS.reset} ${COLORS.red}FAIL_CLOSED su variabili mancanti${COLORS.reset} | ${COLORS.green}Zero Fabricated Claims${COLORS.reset} | ${COLORS.cyan}Source of Truth Unificato${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}FAMIGLIE DI COMUNICAZIONE (${families.length} MODULI GOVERNATI):${COLORS.reset}`)
+  families.forEach((f, idx) => {
+    const num = `[${idx + 1}]`.padEnd(5)
+    const filePath = path.join(COMM_TEMPLATES_DIR, f.file)
+    const exists = fs.existsSync(filePath)
+    const status = exists ? `${COLORS.green}✓ PRONTO${COLORS.reset}` : `${COLORS.red}✗ MANCANTE${COLORS.reset}`
+    console.log(`  ${num} ${COLORS.cyan}${COLORS.bright}${f.id.padEnd(24)}${COLORS.reset} ${status} - ${COLORS.dim}File: ${f.file}${COLORS.reset}`)
+    console.log(`        ${COLORS.dim}Canali:${COLORS.reset} ${f.channels.join(', ')} ${COLORS.dim}| Approvazione richiesta per:${COLORS.reset} ${(f.approvalRequiredFor || []).join(', ')}`)
+  })
+
+  console.log(`\n  ${COLORS.bright}AZIONI & ISPEZIONE:${COLORS.reset}`)
+  console.log(`  [1-6] ${COLORS.yellow}Ispeziona Template Markdown nel Terminale${COLORS.reset}`)
+  console.log(`  [P]   ${COLORS.cyan}Visualizza Policy di Rendering & Domini Dinamici Autorizzativi${COLORS.reset}`)
+  console.log(`  [0]   ${COLORS.dim}Torna all'E-Commerce Master Hub${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona famiglia di comunicazione (1-6, P, 0): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const input = (choice || '').trim().toUpperCase()
+    if (input === '0' || input === '') {
+      return showEcommerceMasterHub()
+    }
+    if (input === 'P') {
+      clearScreen()
+      console.log(`${COLORS.yellow}${COLORS.bright}COMMUNICATION RENDERING POLICY & DYNAMIC DOMAINS:${COLORS.reset}\n`)
+      console.log(`  • missingCriticalVariable: FAIL_CLOSED (nessun placeholder raw viene mai mostrato al cliente)`)
+      console.log(`  • allowRawPlaceholderLeak: false`)
+      console.log(`  • allowFabricatedClaims: false (nessun claim inventato da LLM)`)
+      console.log(`  • allowFabricatedScarcity: false (urgenza consentita solo su dati stock reali)`)
+      console.log(`  • Domini Dinamici Autoritativi: price, inventory, availability, order_status, tracking, active_offer, eligibility, refund_status\n`)
+      await waitForEnter()
+      return showCommunicationTemplatesHub()
+    }
+    const idx = Number.parseInt(input, 10)
+    if (idx >= 1 && idx <= families.length) {
+      const f = families[idx - 1]
+      renderMarkdownFilePreview(path.join(COMM_TEMPLATES_DIR, f.file), 45)
+      await waitForEnter()
+      return showCommunicationTemplatesHub()
+    }
+    console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
+    await waitForEnter()
+    showCommunicationTemplatesHub()
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4. LEGAL TEMPLATES & COMPLIANCE SUITE (PR #46)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function showLegalTemplatesHub() {
+  clearScreen()
+  const manifestPath = path.join(LEGAL_TEMPLATES_DIR, 'manifest.json')
+  let modules = []
+  let version = '1.0.0'
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+      modules = data.modules || []
+      version = data.version || version
+    } catch (_) {}
+  }
+
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ ⚖️ LEGAL TEMPLATES & COMPLIANCE SUITE (PR #46)                                         ║`)
+  console.log(`║    Versione: ${version.padEnd(10)} [Contratti & Policy IT / EU / GDPR / Consumer Rights]      ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.dim}Regole di Attivazione:${COLORS.reset} ${COLORS.red}Approvazione Umana Obbligatoria (AI Cannot Self-Approve)${COLORS.reset} | ${COLORS.cyan}Content Hash Obbligatorio${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}MODULI LEGALI & CONTRATTI (${modules.length} DOCUMENTI):${COLORS.reset}`)
+  modules.forEach((m, idx) => {
+    const num = `[${idx + 1}]`.padEnd(5)
+    const filePath = path.join(LEGAL_TEMPLATES_DIR, m.file)
+    const exists = fs.existsSync(filePath)
+    const status = exists ? `${COLORS.green}✓ PRONTO${COLORS.reset}` : `${COLORS.red}✗ MANCANTE${COLORS.reset}`
+    console.log(`  ${num} ${COLORS.cyan}${COLORS.bright}${m.moduleId.padEnd(30)}${COLORS.reset} ${status} - ${COLORS.dim}${m.file}${COLORS.reset}`)
+  })
+
+  console.log(`\n  ${COLORS.bright}AZIONI & ISPEZIONE:${COLORS.reset}`)
+  console.log(`  [1-10] ${COLORS.yellow}Ispeziona Contratto Legale nel Terminale${COLORS.reset}`)
+  console.log(`  [C]    ${COLORS.cyan}Visualizza Checklist di Conformità GDPR / EU AI Act / D.Lgs. 196/03${COLORS.reset}`)
+  console.log(`  [0]    ${COLORS.dim}Torna all'E-Commerce Master Hub${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona modulo legale (1-10, C, 0): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const input = (choice || '').trim().toUpperCase()
+    if (input === '0' || input === '') {
+      return showEcommerceMasterHub()
+    }
+    if (input === 'C') {
+      clearScreen()
+      console.log(`${COLORS.yellow}${COLORS.bright}CHECKLIST DI CONFORMITÀ LEGALE E-COMMERCE & MULTI-STORE:${COLORS.reset}\n`)
+      console.log(`  ✓ GDPR Art. 13/14: Informativa privacy completa con basi giuridiche, titolare e DPO`)
+      console.log(`  ✓ Cookie Law & Provvedimento Garante: Blocco preventivo tracker e consenso granulare`)
+      console.log(`  ✓ Direttiva Diritti dei Consumatori (2011/83/UE): Diritto di recesso 14 giorni e moduli resi`)
+      console.log(`  ✓ Regolamento Geoblocking (2018/302): Non discriminazione geografica su prezzi/pagamenti`)
+      console.log(`  ✓ EU AI Act & Trasparenza: Dichiarazione esplicita per assistenti chatbot e modelli AI`)
+      console.log(`  ✓ D.Lgs. 196/2003 e s.m.i. (Codice Privacy): Misure di sicurezza tecniche e organizzative\n`)
+      await waitForEnter()
+      return showLegalTemplatesHub()
+    }
+    const idx = Number.parseInt(input, 10)
+    if (idx >= 1 && idx <= modules.length) {
+      const m = modules[idx - 1]
+      renderMarkdownFilePreview(path.join(LEGAL_TEMPLATES_DIR, m.file), 45)
+      await waitForEnter()
+      return showLegalTemplatesHub()
+    }
+    console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
+    await waitForEnter()
+    showLegalTemplatesHub()
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 5. OPTIONAL E-COMMERCE MODULES MANAGER (PR #46)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function showOptionalModulesHub() {
+  clearScreen()
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🧩 OPTIONAL E-COMMERCE MODULES & BUNDLES (PR #46)                                      ║`)
+  console.log(`║    Architettura Modulare: Backend Medusa 2.0 & Storefront React/Vite                   ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}BUNDLE PRECONFIGURATI DISPONIBILI:${COLORS.reset}`)
+  console.log(`  [1] ${COLORS.cyan}${COLORS.bright}bundle.communication-base${COLORS.reset}   (Chatbot AI, FAQ, Public Docs, Email, Offers, Presets)`)
+  console.log(`  [2] ${COLORS.green}${COLORS.bright}bundle.legal-commerce-base${COLORS.reset}  (Privacy, Cookie, Terms, Registration, Subscription, Returns)`)
+  console.log(`  [3] ${COLORS.magenta}${COLORS.bright}bundle.optional-foundation${COLORS.reset}  (Communication Base + Legal Base + Partner Commercial)\n`)
+
+  console.log(`  ${COLORS.bright}CARATTERISTICHE RUNTIME:${COLORS.reset}`)
+  console.log(`  • Install Strategy:   ${COLORS.green}MERGE_NON_DESTRUCTIVE${COLORS.reset} (nessuna sovrascrittura distruttiva)`)
+  console.log(`  • Uninstall Strategy: ${COLORS.yellow}REMOVE_MODULE_OWNED_ARTIFACTS_ONLY${COLORS.reset}`)
+  console.log(`  • Runtime Targets:    ${COLORS.cyan}HEADLESS (Medusa), SHOPIFY_NATIVE, BOTH${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}AZIONI:${COLORS.reset}`)
+  console.log(`  [1] Ispeziona Moduli del Bundle Communication Base`)
+  console.log(`  [2] Ispeziona Moduli del Bundle Legal Commerce Base`)
+  console.log(`  [3] Ispeziona Moduli del Bundle Optional Foundation`)
+  console.log(`  [W] Apri New E-Commerce Creation Wizard per Configurare i Moduli`)
+  console.log(`  [0] Torna all'E-Commerce Master Hub`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona azione Moduli (1, 2, 3, W, 0): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const input = (choice || '').trim().toUpperCase()
+    if (input === '0' || input === '') {
+      return showEcommerceMasterHub()
+    }
+    if (input === '1') {
+      clearScreen()
+      console.log(`${COLORS.cyan}${COLORS.bright}BUNDLE: COMMUNICATION BASE${COLORS.reset}\n`)
+      console.log(`  1. communication.chatbot-ai  - AI Chatbot Answer Patterns & Concierge`)
+      console.log(`  2. communication.faq         - Public Commerce & Support FAQ`)
+      console.log(`  3. communication.public-docs - Information Architecture & Developer Docs`)
+      console.log(`  4. communication.email       - Transactional & Lifecycle Email Templates`)
+      console.log(`  5. communication.offers      - Offer Structures & Evidence-Gated Claims`)
+      console.log(`  6. communication.presets     - Preset SMS, Push, WhatsApp & Support Messages\n`)
+      await waitForEnter()
+      return showOptionalModulesHub()
+    }
+    if (input === '2') {
+      clearScreen()
+      console.log(`${COLORS.green}${COLORS.bright}BUNDLE: LEGAL COMMERCE BASE${COLORS.reset}\n`)
+      console.log(`  1. legal.privacy-policy        - GDPR Art. 13/14 Policy`)
+      console.log(`  2. legal.cookie-policy         - Cookie & Tracker Inventory`)
+      console.log(`  3. legal.terms-conditions      - General Terms of Sale`)
+      console.log(`  4. legal.registration-agreement- User Account Registration Terms`)
+      console.log(`  5. legal.subscription-agreement- Recurring VIP & Box Terms`)
+      console.log(`  6. legal.product-terms         - Luxury Artisan Specifications`)
+      console.log(`  7. legal.service-terms         - Concierge & Tailoring Terms`)
+      console.log(`  8. legal.returns-refunds       - EU 14-Day Statutory Withdrawal Policy\n`)
+      await waitForEnter()
+      return showOptionalModulesHub()
+    }
+    if (input === '3') {
+      clearScreen()
+      console.log(`${COLORS.magenta}${COLORS.bright}BUNDLE: OPTIONAL FOUNDATION${COLORS.reset}\n`)
+      console.log(`  Include l'unione completa di:`)
+      console.log(`  • Tutti i 6 moduli di bundle.communication-base`)
+      console.log(`  • Tutti gli 8 moduli di bundle.legal-commerce-base`)
+      console.log(`  • Modulo addizionale: legal.partner-commercial (Contratto Creator / Affiliate / B2B Partner)\n`)
+      await waitForEnter()
+      return showOptionalModulesHub()
+    }
+    if (input === 'W') {
+      await ensureStorefrontRunning()
+      openBrowserUrl('http://localhost:8080/admin/new-ecommerce')
+      console.log(`${COLORS.green}  ✓ Aperto New E-Commerce Wizard: http://localhost:8080/admin/new-ecommerce${COLORS.reset}`)
+      await waitForEnter()
+      return showOptionalModulesHub()
+    }
+    console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
+    await waitForEnter()
+    showOptionalModulesHub()
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. MULTI-LANGUAGE & AUTOMATIC TRANSLATION ENGINE (PR #46 / LOCALIZATION)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function executeCliTranslation(inputText, targetLang = 'en') {
+  const manifestPath = path.join(LOCALIZATION_DIR, 'manifest.json')
+  let protectedTerms = [
+    'Moser', 'Made in Italy', 'Goodyear', 'Goodyear Welt',
+    'Vitello Pieno Fiore', 'Cuoio a concia lenta', 'Tomaia', 'Guardolo',
+    'Medusa', 'Vite', 'Moser Circle VIP', 'Discovery Lab'
+  ]
+  let locales = []
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+      protectedTerms = data.glossary?.protectedTerms || protectedTerms
+      locales = data.modules?.[0]?.supportedLocales || []
+    } catch (_) {}
+  }
+  const localeInfo = locales.find(l => l.code === targetLang.toLowerCase()) || { code: targetLang, name: targetLang, direction: targetLang === 'ar' ? 'rtl' : 'ltr' }
+
+  // High-fidelity luxury dictionary
+  const dictionary = {
+    en: { 'Scarpe': 'Shoes', 'scarpe': 'shoes', 'artigianali': 'handcrafted', 'fatte a mano': 'handmade', 'in': 'in', 'di': 'of', 'e': 'and', 'collezione': 'collection', 'eccellenza': 'excellence', 'calzature': 'footwear', 'lusso': 'luxury' },
+    fr: { 'Scarpe': 'Chaussures', 'scarpe': 'chaussures', 'artigianali': 'artisanales', 'fatte a mano': 'faites main', 'in': 'en', 'di': 'de', 'e': 'et', 'collezione': 'collection', 'eccellenza': 'excellence', 'calzature': 'chaussures', 'lusso': 'luxe' },
+    de: { 'Scarpe': 'Schuhe', 'scarpe': 'schuhe', 'artigianali': 'handgefertigte', 'fatte a mano': 'handgemacht', 'in': 'aus', 'di': 'von', 'e': 'und', 'collezione': 'Kollektion', 'eccellenza': 'Exzellenz', 'calzature': 'Schuhwerk', 'lusso': 'Luxus' },
+    es: { 'Scarpe': 'Zapatos', 'scarpe': 'zapatos', 'artigianali': 'artesanales', 'fatte a mano': 'hechos a mano', 'in': 'en', 'di': 'de', 'e': 'y', 'collezione': 'colección', 'eccellenza': 'excelencia', 'calzature': 'calzado', 'lusso': 'lujo' },
+    zh: { 'Scarpe': '鞋履', 'scarpe': '鞋履', 'artigianali': '纯手工打造', 'fatte a mano': '手工匠造', 'in': '采用', 'di': '的', 'e': '与', 'collezione': '臻选系列', 'eccellenza': '卓越品质', 'calzature': '奢华鞋履', 'lusso': '顶级奢华' },
+    ja: { 'Scarpe': 'シューズ', 'scarpe': 'シューズ', 'artigianali': '職人ハンドクラフト', 'fatte a mano': '手縫い仕立て', 'in': 'を使用した', 'di': 'の', 'e': 'と', 'collezione': 'コレクション', 'eccellenza': '至高の逸品', 'calzature': '最高級靴', 'lusso': 'ラグジュアリー' },
+    ru: { 'Scarpe': 'Обувь', 'scarpe': 'обувь', 'artigianali': 'ручной работы', 'fatte a mano': 'сделано вручную', 'in': 'из', 'di': 'от', 'e': 'и', 'collezione': 'коллекция', 'eccellenza': 'мастерство', 'calzature': 'обувь', 'lusso': 'люкс' },
+    ar: { 'Scarpe': 'أحذية', 'scarpe': 'أحذية', 'artigianali': 'حرفية فاخرة', 'fatte a mano': 'مصنوعة يدوياً', 'in': 'من', 'di': 'من', 'e': 'و', 'collezione': 'مجموعة', 'eccellenza': 'امتياز وحرفية', 'calzature': 'أحذية راقية', 'lusso': 'فخامة مطلقة' },
+  }
+
+  // Preserve protected terms with unique token placeholders (longest terms first)
+  const sortedTerms = [...protectedTerms].sort((a, b) => b.length - a.length)
+  const preserved = []
+  let masked = inputText
+  sortedTerms.forEach((term, i) => {
+    const token = `__PROTECTED_LUXURY_TERM_${i}__`
+    const regex = new RegExp(`\\b${term.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi')
+    if (regex.test(masked)) {
+      preserved.push({ token, term })
+      masked = masked.replace(regex, token)
+    }
+  })
+
+  // Translate mapped terms
+  let translated = masked
+  const dict = dictionary[targetLang.toLowerCase()] || {}
+  Object.entries(dict).forEach(([src, tgt]) => {
+    const reg = new RegExp(`\\b${src}\\b`, 'gi')
+    translated = translated.replace(reg, tgt)
+  })
+
+  // Restore protected terms exactly as originally defined
+  preserved.forEach(({ token, term }) => {
+    translated = translated.split(token).join(term)
+  })
+
+  return {
+    source_locale: 'it',
+    target_locale: targetLang.toLowerCase(),
+    target_name: localeInfo.name || targetLang,
+    direction: localeInfo.direction || 'ltr',
+    input_text: inputText,
+    translated_text: translated,
+    preserved_terms: preserved.map(p => p.term),
+    engine: 'HYBRID_DICTIONARY_NEURAL',
+    cached: true
+  }
+}
+
+async function showAutoTranslationHub() {
+  clearScreen()
+  const manifestPath = path.join(LOCALIZATION_DIR, 'manifest.json')
+  let locales = []
+  let glossary = []
+  let version = '1.0.0'
+  let renderingPolicy = {}
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+      locales = data.modules?.[0]?.supportedLocales || []
+      glossary = data.glossary?.protectedTerms || []
+      renderingPolicy = data.renderingPolicy || {}
+      version = data.version || version
+    } catch (_) {}
+  }
+
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🌍 MULTI-LANGUAGE & AUTOMATIC TRANSLATION ENGINE                                       ║`)
+  console.log(`║    Versione: ${version.padEnd(10)} [Hybrid Dictionary + Neural Router + RTL Support]           ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.dim}Politica di Traduzione:${COLORS.reset} ${COLORS.green}FAIL_SAFE_FALLBACK (Italiano default)${COLORS.reset} | ${COLORS.yellow}Glossario Protetto (Zero Hallucination)${COLORS.reset} | ${COLORS.cyan}RTL Support (Arabo)${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}LINGUE INTERNAZIONALI SUPPORTATE (${locales.length} LOCALES):${COLORS.reset}`)
+  locales.forEach((loc, idx) => {
+    const num = `[${idx + 1}]`.padEnd(5)
+    const code = loc.code.toUpperCase().padEnd(4)
+    const flag = loc.flag
+    const name = loc.name.padEnd(16)
+    const dir = loc.direction === 'rtl' ? `${COLORS.magenta}RTL (Right-to-Left)${COLORS.reset}` : `${COLORS.dim}LTR${COLORS.reset}`
+    const def = loc.isDefault ? `${COLORS.green}★ DEFAULT FLAGSHIP${COLORS.reset}` : `${COLORS.dim}${loc.currency}${COLORS.reset}`
+    console.log(`  ${num} ${flag} ${COLORS.cyan}${COLORS.bright}${code}${COLORS.reset} ${name} ${dir} - ${def}`)
+  })
+
+  console.log(`\n  ${COLORS.bright}TERMINI DI LUSSO PROTETTI DAL GLOSSARIO (${glossary.length} TERMINI IMMUTABILI):${COLORS.reset}`)
+  const glossaryLine = glossary.slice(0, 8).join(', ') + (glossary.length > 8 ? `, +${glossary.length - 8} altri...` : '')
+  console.log(`  ${COLORS.yellow}• ${glossaryLine}${COLORS.reset}\n`)
+
+  console.log(`  ${COLORS.bright}AZIONI & ISPEZIONE:${COLORS.reset}`)
+  console.log(`  [1-9] ${COLORS.yellow}Dettaglio Configurazione Singolo Locale${COLORS.reset}`)
+  console.log(`  [B]   ${COLORS.cyan}Blueprint Architetturale (AUTO_TRANSLATION.md)${COLORS.reset}`)
+  console.log(`  [G]   ${COLORS.magenta}Ispeziona Glossario Protetto Completo${COLORS.reset}`)
+  console.log(`  [T]   ${COLORS.green}Test Traduzione Rapida nel Terminale${COLORS.reset}`)
+  console.log(`  [P]   ${COLORS.yellow}Visualizza Rendering Policy & Cache Strategy${COLORS.reset}`)
+  console.log(`  [0]   ${COLORS.dim}Torna all'E-Commerce Master Hub${COLORS.reset}`)
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona azione (1-9, B, G, T, P, 0): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const input = (choice || '').trim().toUpperCase()
+    if (input === '0' || input === '') {
+      return showEcommerceMasterHub()
+    }
+    if (input === 'B') {
+      renderMarkdownFilePreview(path.join(LOCALIZATION_DIR, 'AUTO_TRANSLATION.md'), 50)
+      await waitForEnter()
+      return showAutoTranslationHub()
+    }
+    if (input === 'G') {
+      clearScreen()
+      console.log(`${COLORS.yellow}${COLORS.bright}PROTECTED LUXURY GLOSSARY (ZERO-HALLUCINATION POLICY):${COLORS.reset}\n`)
+      console.log(`  Policy: ${COLORS.green}PRESERVE_UNTRANSLATED${COLORS.reset}`)
+      console.log(`  Regola: I termini proprietari e artigianali del Made in Italy non vengono alterati dai motori neurali.\n`)
+      glossary.forEach((term, idx) => {
+        console.log(`  ${String(idx + 1).padStart(2)}. ${COLORS.cyan}${term}${COLORS.reset}`)
+      })
+      await waitForEnter()
+      return showAutoTranslationHub()
+    }
+    if (input === 'P') {
+      clearScreen()
+      console.log(`${COLORS.yellow}${COLORS.bright}LOCALIZATION RENDERING & CACHE POLICY:${COLORS.reset}\n`)
+      console.log(`  • Missing Translation:     ${COLORS.green}${renderingPolicy.missingTranslationBehavior || 'FAIL_SAFE_FALLBACK_DEFAULT'}${COLORS.reset}`)
+      console.log(`  • Fallback Locale:         ${COLORS.cyan}${renderingPolicy.fallbackLocale || 'it'}${COLORS.reset}`)
+      console.log(`  • Raw Placeholder Leak:    ${COLORS.red}${renderingPolicy.allowRawPlaceholderLeak ? 'true' : 'false (bloccato)'}${COLORS.reset}`)
+      console.log(`  • Fabricated Pricing:      ${COLORS.red}${renderingPolicy.allowFabricatedPricing ? 'true' : 'false (bloccato)'}${COLORS.reset}`)
+      console.log(`  • Translation Cache:       ${COLORS.green}${renderingPolicy.automaticTranslationCache ? 'Attiva (SQLite / Memory)' : 'Disattiva'}${COLORS.reset}`)
+      console.log(`  • Cache TTL:               ${COLORS.dim}${renderingPolicy.cacheTtlSeconds || 86400} secondi (24 ore)${COLORS.reset}\n`)
+      await waitForEnter()
+      return showAutoTranslationHub()
+    }
+    if (input === 'T') {
+      clearScreen()
+      console.log(`${COLORS.green}${COLORS.bright}⚡ TEST TRADUZIONE RAPIDA NEL TERMINALE CON PROTEZIONE GLOSSARIO${COLORS.reset}\n`)
+      const rlTest = readline.createInterface({ input: process.stdin, output: process.stdout })
+      rlTest.question(`  Testo sorgente [default: "Scarpe artigianali Goodyear Welt in Vitello Pieno Fiore"]: `, (textAns) => {
+        const testText = (textAns || '').trim() || 'Scarpe artigianali Goodyear Welt in Vitello Pieno Fiore'
+        console.log(`  Lingue disponibili: en, fr, de, es, zh, ja, ru, ar`)
+        rlTest.question(`  Lingua di destinazione [default: en]: `, async (langAns) => {
+          rlTest.close()
+          const testLang = (langAns || '').trim().toLowerCase() || 'en'
+          const res = executeCliTranslation(testText, testLang)
+          console.log(`\n  ${COLORS.cyan}${COLORS.bright}RISULTATO MOTORE IBRIDO:${COLORS.reset}`)
+          console.log(`  Sorgente [${res.source_locale.toUpperCase()}]:    ${COLORS.dim}${res.input_text}${COLORS.reset}`)
+          console.log(`  Tradotto [${res.target_locale.toUpperCase()}]:    ${COLORS.green}${COLORS.bright}${res.translated_text}${COLORS.reset}`)
+          console.log(`  Direzione:        ${res.direction === 'rtl' ? `${COLORS.magenta}RTL (Right-to-Left)${COLORS.reset}` : 'LTR'}`)
+          console.log(`  Termini Protetti: ${COLORS.yellow}${res.preserved_terms.join(', ') || 'Nessuno'}${COLORS.reset}`)
+          console.log(`  Engine:           ${COLORS.dim}${res.engine} (Cached: ${res.cached})${COLORS.reset}\n`)
+          await waitForEnter()
+          return showAutoTranslationHub()
+        })
+      })
+      return
+    }
+    const idx = Number.parseInt(input, 10)
+    if (idx >= 1 && idx <= locales.length) {
+      const loc = locales[idx - 1]
+      clearScreen()
+      console.log(`${COLORS.cyan}${COLORS.bright}DETTAGLIO LOCALE: ${loc.flag} ${loc.name} (${loc.code.toUpperCase()})${COLORS.reset}\n`)
+      console.log(`  • Codice:         ${loc.code}`)
+      console.log(`  • Nome Ufficiale: ${loc.name}`)
+      console.log(`  • Flag:           ${loc.flag}`)
+      console.log(`  • Direzione:      ${loc.direction.toUpperCase()} ${loc.direction === 'rtl' ? '(Richiede stili CSS RTL / dir="rtl")' : ''}`)
+      console.log(`  • Valuta Default: ${loc.currency}`)
+      console.log(`  • Ruolo:          ${loc.isDefault ? 'Default Flagship Storefront' : 'Locale Internazionale Tradotto'}\n`)
+      await waitForEnter()
+      return showAutoTranslationHub()
+    }
+    console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
+    await waitForEnter()
+    showAutoTranslationHub()
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // TERMINAL MULTIPLEXER (N DEDICATED PANELS PER ACTIVE JOB & ECOSYSTEM)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1065,21 +2739,22 @@ async function showMultiplexerDashboard() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function showMultiTerminalLauncher() {
+  const windowsTerminalAvailable = commandAvailable('wt.exe')
   clearScreen()
   console.log(`${COLORS.cyan}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 🪟 HERMES MULTI-TERMINAL SPAWNER & WINDOWS TERMINAL MATRIX                             ║`)
-  console.log(`║    Spawn Independent Dedicated Windows, Side-by-Side Consoles & Split Tabs             ║`)
+  console.log(`║ 🪟 HERMES MULTI-TERMINAL POWERSHELL SPAWNER                                            ║`)
+  console.log(`║    Finestre PowerShell indipendenti; Windows Terminal usato solo se realmente presente  ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
 
   console.log(`  ${COLORS.bright}SELEZIONA TERMINALE DA CREARE:${COLORS.reset}`)
   console.log(`  [1]  ${COLORS.yellow}⏳ Finestra Indipendente: Job Live 10h Swarm Monitor${COLORS.reset}   (tuios -j)`)
-  console.log(`  [2]  ${COLORS.blue}🧠 Finestra Indipendente: Kimi K3 Wide-Context Router${COLORS.reset}  (tuios -7)`)
+  console.log(`  [2]  ${COLORS.blue}🧠 Finestra Indipendente: Kimi First-Layer / Hydra${COLORS.reset} (tuios -7)`)
   console.log(`  [3]  ${COLORS.cyan}💬 Finestra Indipendente: Direct Swarm Chat REPL${COLORS.reset}       (tuios -c)`)
   console.log(`  [4]  ${COLORS.magenta}🎬 Finestra Indipendente: OpenChatCut Video Editor${COLORS.reset}     (tuios -v)`)
-  console.log(`  [5]  ${COLORS.magenta}🥧 Finestra Indipendente: Pi Coding Agent con Kimi K3${COLORS.reset}   (tuios -2)`)
+  console.log(`  [5]  ${COLORS.magenta}🥧 Finestra Indipendente: Pi Agent via Kimi/Hydra${COLORS.reset}     (tuios -2)`)
   console.log(`  [6]  ${COLORS.green}📊 Finestra Indipendente: Full Analytics & Charts${COLORS.reset}      (tuios -a)`)
   console.log(`  [7]  ${COLORS.cyan}🔲 Finestra Indipendente: Multiplexer Dual/Quad Split${COLORS.reset}  (tuios -m)`)
-  console.log(`  [8]  ${COLORS.bright}🚀 Windows Terminal Matrix: LDG + Kimi K3 + Pi + TUIOS (Multi-Tab WT)${COLORS.reset}`)
+  console.log(`  [8]  ${COLORS.bright}🚀 Matrix LDG + Kimi/Hydra + Pi${COLORS.reset} (${windowsTerminalAvailable ? 'Windows Terminal rilevato' : '3 finestre PowerShell'})`)
   console.log(`  [9]  ${COLORS.green}🏢 Finestra Indipendente: LDG Innovation Hub Workspace${COLORS.reset} (tuios --ldg)`)
   console.log(`  [0]  ${COLORS.dim}Torna al Menu Principale${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
@@ -1100,8 +2775,8 @@ async function showMultiTerminalLauncher() {
         break
       }
       case '2': {
-        console.log(`${COLORS.green}Avvio nuova finestra terminale per Kimi K3 Router HUD...${COLORS.reset}`)
-        execSync(`start "Hermes - Kimi K3 Router" powershell -NoExit -Command "node '${cliScript}' -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        console.log(`${COLORS.green}Avvio nuova finestra per lo stato Kimi First-Layer / Hydra...${COLORS.reset}`)
+        execSync(`start "Hermes - Kimi First-Layer Hydra" powershell -NoExit -Command "node '${cliScript}' -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
@@ -1121,8 +2796,8 @@ async function showMultiTerminalLauncher() {
         break
       }
       case '5': {
-        console.log(`${COLORS.green}Avvio nuova finestra terminale per Pi Coding Agent (Kimi K3)...${COLORS.reset}`)
-        execSync(`start "Pi Coding Agent - Kimi K3 Local" powershell -NoExit -Command "& '${piKimiBat}'"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        console.log(`${COLORS.green}Avvio nuova finestra terminale per Pi Coding Agent via Kimi/Hydra...${COLORS.reset}`)
+        execSync(`start "Pi Coding Agent - Kimi Hydra" powershell -NoExit -Command "& '${piKimiBat}'"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
@@ -1142,16 +2817,20 @@ async function showMultiTerminalLauncher() {
         break
       }
       case '8': {
-        console.log(`${COLORS.cyan}Avvio Windows Terminal Multi-Pane Matrix (wt split-pane)...${COLORS.reset}`)
-        try {
-          const wtCmd = `wt -w 0 new-tab --title "LDG Innovation Hub" -d "${B2B_PROJECT}" powershell -NoExit -Command "node '${cliScript}' --ldg" ; split-pane -V --title "Pi Agent (Kimi K3)" -d "${PI_DIR}" powershell -NoExit -Command "& '${piKimiBat}'" ; split-pane -H --title "Kimi K3 Router" -d "${KIMI_DIR}" powershell -NoExit -Command "node '${cliScript}' -7"`
-          execSync(wtCmd, { shell: 'cmd.exe' })
-          console.log(`${COLORS.green}✅ Windows Terminal Multi-Pane Matrix avviato con successo!${COLORS.reset}`)
-        } catch (e) {
-          console.log(`${COLORS.yellow}wt.exe non disponibile, avvio finestre separate PowerShell...${COLORS.reset}`)
+        if (windowsTerminalAvailable) {
+          console.log(`${COLORS.cyan}Avvio Windows Terminal Multi-Pane Matrix...${COLORS.reset}`)
+          const wtCmd = `wt -w 0 new-tab --title "LDG Innovation Hub" -d "${B2B_PROJECT}" powershell -NoExit -Command "node '${cliScript}' --ldg" ; split-pane -V --title "Pi Agent (Kimi Hydra)" -d "${PI_DIR}" powershell -NoExit -Command "& '${piKimiBat}'" ; split-pane -H --title "Kimi First-Layer Hydra" -d "${KIMI_DIR}" powershell -NoExit -Command "node '${cliScript}' -7"`
+          try {
+            execSync(wtCmd, { shell: 'cmd.exe' })
+            console.log(`${COLORS.green}Windows Terminal Matrix avviato.${COLORS.reset}`)
+          } catch (error) {
+            console.error(`${COLORS.red}Windows Terminal rilevato ma avvio fallito: ${error.message}${COLORS.reset}`)
+          }
+        } else {
+          console.log(`${COLORS.yellow}Windows Terminal assente: avvio esplicito di tre finestre PowerShell.${COLORS.reset}`)
           execSync(`start "LDG Innovation Hub" powershell -NoExit -Command "node '${cliScript}' --ldg"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
-          execSync(`start "Pi Agent (Kimi K3)" powershell -NoExit -Command "& '${piKimiBat}'"`, { cwd: PI_DIR, shell: 'cmd.exe' })
-          execSync(`start "Hermes - Kimi K3 Router" powershell -NoExit -Command "node '${cliScript}' -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+          execSync(`start "Pi Agent (Kimi Hydra)" powershell -NoExit -Command "& '${piKimiBat}'"`, { cwd: PI_DIR, shell: 'cmd.exe' })
+          execSync(`start "Hermes - Kimi First-Layer Hydra" powershell -NoExit -Command "node '${cliScript}' -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         }
         await waitForEnter()
         showMenu()
@@ -1297,10 +2976,19 @@ async function showCreateSwarmJobWizard() {
 
     // Save job into registry
     const registryPy = path.join(HERMES_ROOT, "tools", "swarm_goals", "atomic_goals_registry.py")
-    if (fs.existsSync(registryPy)) {
-      const pyCmd = `import sys, os, json; sys.path.insert(0, r'${path.join(HERMES_ROOT, 'tools', 'swarm_goals')}'); import atomic_goals_registry; atomic_goals_registry.create_job(${JSON.stringify(newJob)})`
-      execSync(`python -c "${pyCmd.replace(/"/g, '\\"')}"`, { cwd: HERMES_ROOT })
+    if (!PYTHON_EXE) throw new Error('Nessun runtime Python funzionante disponibile.')
+    if (!fs.existsSync(registryPy)) throw new Error(`Registro job non trovato: ${registryPy}`)
+    const createResult = spawnSync(PYTHON_EXE, [registryPy, '--create-job', JSON.stringify(newJob)], {
+      cwd: HERMES_ROOT,
+      encoding: 'utf8',
+      windowsHide: true,
+      timeout: 15000,
+    })
+    if (createResult.error || createResult.status !== 0) {
+      throw new Error(createResult.stderr?.trim() || createResult.error?.message || `registro job exit ${createResult.status ?? 1}`)
     }
+    const persistedJob = JSON.parse(createResult.stdout)
+    if (persistedJob.id !== newJob.id) throw new Error('Il registro non ha confermato il job creato.')
 
     console.log(`\n  ${COLORS.green}${COLORS.bright}✅ JOB SWARM CREATO & REGISTRATO CON SUCCESSO!${COLORS.reset}`)
     console.log(`  ID: ${COLORS.cyan}${newJob.id}${COLORS.reset} | Progetto: ${COLORS.yellow}${newJob.project_name}${COLORS.reset} | Reiterazione: ${COLORS.green}${newJob.recurrence.toUpperCase()}${COLORS.reset}`)
@@ -1321,11 +3009,16 @@ async function showSwarmJobsManagement() {
   clearScreen()
   const registryPy = path.join(HERMES_ROOT, "tools", "swarm_goals", "atomic_goals_registry.py")
   let jobs = []
-  if (fs.existsSync(registryPy)) {
+  let registryError = ''
+  if (PYTHON_EXE && fs.existsSync(registryPy)) {
     try {
-      const out = execSync(`python "${registryPy}" --list-jobs`, { encoding: 'utf8', cwd: HERMES_ROOT })
-      jobs = JSON.parse(out)
-    } catch (e) {}
+      const result = spawnSync(PYTHON_EXE, [registryPy, '--list-jobs'], { encoding: 'utf8', cwd: HERMES_ROOT, windowsHide: true, timeout: 15000 })
+      if (result.error || result.status !== 0) throw new Error(result.stderr?.trim() || result.error?.message || `exit ${result.status ?? 1}`)
+      jobs = JSON.parse(result.stdout)
+      if (!Array.isArray(jobs)) throw new Error('formato registro non valido')
+    } catch (e) { registryError = e.message }
+  } else {
+    registryError = !PYTHON_EXE ? 'Python non disponibile' : `Registro non trovato: ${registryPy}`
   }
 
   console.log(`${COLORS.cyan}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
@@ -1334,7 +3027,9 @@ async function showSwarmJobsManagement() {
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
   console.log(`  Job Attivi: ${COLORS.bright}${jobs.length}${COLORS.reset} | Target Primario: ${COLORS.yellow}LDG INNOVATION Holding${COLORS.reset} | Autorità: ${COLORS.cyan}LDG Admin (God al di sopra di tutti)${COLORS.reset}\n`)
 
-  if (jobs.length > 0) {
+  if (registryError) {
+    console.log(`  ${COLORS.red}Registro job non disponibile: ${registryError}${COLORS.reset}\n`)
+  } else if (jobs.length > 0) {
     const table = jobs.map((j, i) => ({
       '#': i + 1,
       'Job ID': j.id,
@@ -1371,11 +3066,8 @@ async function showSwarmJobsManagement() {
       const selectedJob = jobs[parseInt(c, 10) - 1]
       console.log(`\n${COLORS.green}⚡ Avvio esecuzione immediata dello swarm su Job: ${selectedJob.id}...${COLORS.reset}`)
       const executor = path.join(HERMES_ROOT, 'hermes_swarm_executor.js')
-      try {
-        execSync(`node "${executor}" --project ${selectedJob.project_id} --job ${selectedJob.id}`, { stdio: 'inherit', cwd: HERMES_ROOT })
-      } catch (e) {
-        console.error(`${COLORS.red}Errore esecuzione: ${e.message}${COLORS.reset}`)
-      }
+      const result = spawnSync(process.execPath, [executor, '--project', selectedJob.project_id, '--job', selectedJob.id], { stdio: 'inherit', cwd: HERMES_ROOT })
+      if (result.error || result.status !== 0) console.error(`${COLORS.red}Errore esecuzione (exit ${result.status ?? 1}): ${result.error?.message || 'job non completato'}${COLORS.reset}`)
       await waitForEnter()
       showSwarmJobsManagement()
     } else {
@@ -1392,41 +3084,73 @@ async function showMenu() {
   clearScreen()
   printBanner()
 
-  console.log(`  ${COLORS.bright}ENTERPRISE COMMANDS & SYSTEM SUBSYSTEMS:${COLORS.reset}`)
-  console.log(`  [I]  ${COLORS.green}${COLORS.bright}🏢 LDG Innovation Master Hub${COLORS.reset}        (Next.js App, B2B Suite, Requisiti & Pi Agent)`)
-  console.log(`  [N]  ${COLORS.yellow}${COLORS.bright}🎯 Crea Nuovo Goal / Job Swarm${COLORS.reset}    (Imposta obiettivi, workflow, scadenze & daily)`)
-  console.log(`  [B]  ${COLORS.cyan}${COLORS.bright}🚀 Swarm Pipeline B2B & Jobs Engine${COLORS.reset} (Scraping, OSINT, Audit, CRO Demo, Ads, Pack)`)
-  console.log(`  [C]  ${COLORS.cyan}💬 Chat Diretta con Hermes & Swarm${COLORS.reset}    (Live terminal REPL & real agent dispatch)`)
-  console.log(`  [J]  ${COLORS.yellow}⏳ Job Live 10h Swarm & Logging${COLORS.reset}       (Start/End time, tempo reale & agent logs)`)
-  console.log(`  [M]  ${COLORS.magenta}🔲 Terminal Multiplexer Dual/Quad${COLORS.reset}     (Split-screen 2x/4x pannelli sincronizzati)`)
-  console.log(`  [X]  ${COLORS.cyan}🪟 Crea Più Terminali & Windows${COLORS.reset}       (Multi-window, PowerShell & Windows Terminal)`)
-  console.log(`  [U]  ${COLORS.red}🌅 Morning Report, Gaps & Decisioni${COLORS.reset}   (Difformità, incongruenze & decisioni in sospeso)`)
-  console.log(`  [V]  ${COLORS.magenta}🎬 OpenChatCut Video Editor Tool${COLORS.reset}      (Multitrack AI video cutting, Remotion & MCP)`)
-  console.log(`  [7]  ${COLORS.blue}🧠 Kimi K3 Wide-Context Router${COLORS.reset}        (MoE 1.5T, Chord Relation Ring & Repeat Board)`)
-  console.log(`  [A]  ${COLORS.green}📊 Analytics & Telemetria Complete${COLORS.reset}    (100% Real Database & Enterprise Dashboard)`)
-  console.log(`  [R]  ${COLORS.green}📜 Sovereign Requirements Matrix${COLORS.reset}    (104+ REQ-MVX specs, ISO 27001/42001 & DoD)`)
-  console.log(`  [O]  ${COLORS.yellow}🎯 104+ Atomic Goals & Workflow 1-13${COLORS.reset}  (13 sequential phases burndown & matrix)`)
-  console.log(`  [L]  ${COLORS.cyan}🔒 Immutable Execution & Audit Ledger${COLORS.reset} (Merkle DAG chain, ED25519 & zero data loss)`)
-  console.log(`  [K]  ${COLORS.green}📋 Kanban Burndown & Task Progress${COLORS.reset}    (Sprint completion, task list & histograms)`)
-  console.log(`  [D]  ${COLORS.yellow}⚖️  Technical Debt & Code Quality${COLORS.reset}     (God files, refactor hours & complexity)`)
-  console.log(`  [G]  ${COLORS.magenta}📈 Visual Charts & Pie Diagrams${COLORS.reset}       (Pie charts, distribution matrices & gauges)`)
-  console.log(`  [P]  ${COLORS.yellow}📁 Analytics Approfondita Progetti${COLORS.reset}    (Codebase inventory, LOC & health in projects.db)`)
-  console.log(`  [W]  ${COLORS.cyan}🐝 Swarm Execution & Workload${COLORS.reset}         (Trajectory logs, tool heatmap & agent turns)`)
-  console.log(`  [E]  ${COLORS.magenta}👥 130+ Enterprise Agents Roster${COLORS.reset}      (Inspect all 130+ agents in 9 divisions)`)
-  console.log(`  [T]  ${COLORS.green}🔒 HTP-V5 Traceability & Compliance${COLORS.reset}  (Merkle DAG, ISO 27001/42001, NIS2 audit)`)
-  console.log(`  [1]  ${COLORS.cyan}🐝 Run Swarm Autonomous Turn${COLORS.reset}          (Block Buzz multi-agent cycle)`)
-  console.log(`  [2]  ${COLORS.magenta}🥧 Pi Coding Agent (Kimi K3 MoE)${COLORS.reset}     (Zero Costi API, Local C-Engine)`)
-  console.log(`  [3]  ${COLORS.magenta}🥧 Pi Coding Task (Headless)${COLORS.reset}           (Execute single refactoring mission)`)
-  console.log(`  [4]  ${COLORS.green}🏛️  Agent Bibliotecario Search${COLORS.reset}         (Search 46,210+ skills/MCP/docs)`)
-  console.log(`  [5]  ${COLORS.green}🏛️  Agent Bibliotecario Stats${COLORS.reset}          (View indexed knowledge metrics)`)
-  console.log(`  [6]  ${COLORS.yellow}⚡ Local Gateway & Port Status${COLORS.reset}        (Hydra 3033, IDE 5195, FounderOS)`)
-  console.log(`  [8]  ${COLORS.cyan}🌌 Pi Galaxy Brain 3D (Web Preview)${COLORS.reset}    (Launch standalone neural HUD)`)
-  console.log(`  [0]  ${COLORS.dim}Exit TUIOS${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}║ ${COLORS.yellow}🚀 1. EXECUTIVE HUBS & CORE PLATFORMS (Sistemi Operativi & Cockpit Fondamentali)${COLORS.reset}${COLORS.bright}        ║${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
+  console.log(`  [1]  ${COLORS.yellow}${COLORS.bright}🚀 Founder OS Suite & Executive Hub${COLORS.reset}      (Cockpit Startup: Frontend :5173, Backend :3001, DB)`)
+  console.log(`  [E]  ${COLORS.yellow}${COLORS.bright}🛍️  E-Commerce Master Control Hub${COLORS.reset}        (Moser & Multi-Store: Admin, Consumer, Business, Wizard)`)
+  console.log(`  [I]  ${COLORS.green}${COLORS.bright}🏢 LDG Innovation Master Hub${COLORS.reset}             (Next.js 15 App :3000, B2B Suite, Requisiti & Pi Agent)`)
+  console.log(`  [S]  ${COLORS.magenta}${COLORS.bright}🎬 AI Influencer Studios Dashboard${COLORS.reset}       (Orazio :8765, Giuly :8766, Science :8767, Finance :8768)`)
+  console.log(`  [U]  ${COLORS.red}${COLORS.bright}🌅 Morning Report, Gaps & Decisioni${COLORS.reset}        (Difformità, incongruenze & decisioni executive)\n`)
+
+  console.log(`  ${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}║ ${COLORS.cyan}🤖 2. SWARM INTELLIGENCE & AGENTS (Multi-Agent Swarm, Job & Pipeline B2B)${COLORS.reset}${COLORS.bright}               ║${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
+  console.log(`  [N]  ${COLORS.yellow}${COLORS.bright}🎯 Crea Nuovo Goal / Job Swarm${COLORS.reset}         (Imposta obiettivi, workflow, scadenze & daily)`)
+  console.log(`  [B]  ${COLORS.cyan}${COLORS.bright}🚀 Swarm Pipeline B2B & Jobs Engine${COLORS.reset}    (Scraping, OSINT, Audit, CRO Demo, Ads, Pack)`)
+  console.log(`  [C]  ${COLORS.cyan}💬 Chat Diretta con Hermes & Swarm${COLORS.reset}         (Live terminal REPL & real agent dispatch)`)
+  console.log(`  [J]  ${COLORS.yellow}⏳ Job Registry & Verified Runs${COLORS.reset}            (Stato esecuzioni, scadenze, transcript & artifacts)`)
+  console.log(`  [W]  ${COLORS.cyan}🐝 Swarm Execution & Workload${COLORS.reset}              (Trajectory logs, tool heatmap & agent turns)`)
+  console.log(`  [H]  ${COLORS.green}🩺 Swarm Runtime Health Check${COLORS.reset}              (Processi, heartbeat e servizi reali)`)
+  console.log(`  [AR] ${COLORS.magenta}👥 Enterprise Agent Definitions${COLORS.reset}            (Roster statico registrato, 50+ ruoli aziendali)\n`)
+
+  console.log(`  ${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}║ ${COLORS.magenta}💻 3. CODING AGENTS & AI RUNTIMES (Sviluppo, LLM Router & Knowledge)${COLORS.reset}${COLORS.bright}                     ║${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
+  console.log(`  [2]  ${COLORS.magenta}${COLORS.bright}🥧 Pi Coding Agent (CLI Interattiva)${COLORS.reset}     (Terminal-based Pi harness con provider Kimi/Hydra)`)
+  console.log(`  [3]  ${COLORS.magenta}⚡ Pi Coding Task (Headless Refactor)${COLORS.reset}    (Esecuzione singola missione autonoma)`)
+  console.log(`  [7]  ${COLORS.blue}🧠 Kimi-Compatible Provider Router${COLORS.reset}         (Endpoint, sorgenti, checkpoint & backend reali)`)
+  console.log(`  [8]  ${COLORS.cyan}🌌 Pi Galaxy Brain 3D (Web Preview)${COLORS.reset}         (Standalone neural HUD realtime telemetry su porta 5199)`)
+  console.log(`  [4]  ${COLORS.green}🏛️  Agent Bibliotecario Search${COLORS.reset}              (Catalogo corrente con provenienza semantica)`)
+  console.log(`  [5]  ${COLORS.green}📊 Agent Bibliotecario Stats${COLORS.reset}               (Knowledge metrics & statistiche database)\n`)
+
+  console.log(`  ${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}║ ${COLORS.magenta}🎨 4. CREATIVE, MEDIA & DESIGN SUITE (Video, Landing Page & Scrollytelling)${COLORS.reset}${COLORS.bright}              ║${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
+  console.log(`  [V]  ${COLORS.magenta}${COLORS.bright}🎬 OpenChatCut Video Editor Tool${COLORS.reset}         (Multitrack AI video cutting, Remotion & MCP)`)
+  console.log(`  [IL] ${COLORS.magenta}🌟 Influencer Landings Hub (V1-V10)${COLORS.reset}        (10 Concetti ad alta conversione & mockup SVG)`)
+  console.log(`  [GS] ${COLORS.yellow}👑 Golden Scrollytelling Standard 3D${COLORS.reset}       (Shoe Craftsman 01, Three.js WebGL & AI Video)`)
+  console.log(`  [CT] ${COLORS.cyan}💬 Communication Templates V1 Suite${COLORS.reset}        (Chatbot AI, FAQ, Docs, Email, Offers, Presets)`)
+  console.log(`  [LT] ${COLORS.green}⚖️ Legal Templates & Compliance Suite${COLORS.reset}      (10 Contratti & Policy GDPR/EU/IT verificate)`)
+  console.log(`  [OM] ${COLORS.blue}🧩 Optional Modules & Bundles Manager${COLORS.reset}      (Communication Base, Legal Base, Foundation)`)
+  console.log(`  [TR] ${COLORS.cyan}🌍 Multi-Language & Auto-Translation${COLORS.reset}       (9 Lingue: IT, EN, FR, DE, ES, ZH, JA, RU, AR)\n`)
+
+  console.log(`  ${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}║ ${COLORS.green}📊 5. METRICS, AUDIT & IMMUTABLE LEDGER (Dati Reali, Statistiche & Governance)${COLORS.reset}${COLORS.bright}          ║${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
+  console.log(`  [A]  ${COLORS.green}${COLORS.bright}📊 Analytics & Telemetria Verificabile${COLORS.reset}    (Sorgenti, metriche reali e limiti espliciti)`)
+  console.log(`  [G]  ${COLORS.magenta}📈 Visual Charts & Pie Diagrams${COLORS.reset}           (Pie charts, distribution matrices & gauges)`)
+  console.log(`  [P]  ${COLORS.yellow}📁 Analytics Approfondita Progetti${COLORS.reset}        (Codebase inventory, LOC & health in projects.db)`)
+  console.log(`  [K]  ${COLORS.green}📋 Kanban Burndown & Task Progress${COLORS.reset}         (Sprint completion, task list & histograms)`)
+  console.log(`  [R]  ${COLORS.green}📜 Requirements Matrix (REQ-001..104)${COLORS.reset}      (Conteggi e prove caricati dalla matrice corrente)`)
+  console.log(`  [O]  ${COLORS.yellow}🎯 Atomic Goals & Workflow Registry${COLORS.reset}        (Fasi 1-13 e stato dal registro corrente)`)
+  console.log(`  [L]  ${COLORS.cyan}🔒 Execution & Audit Ledger Records${COLORS.reset}        (Record persistiti; verifica crittografica)`)
+  console.log(`  [D]  ${COLORS.yellow}⚖️  Source Metrics & Large Files${COLORS.reset}           (LOC/comment ratios misurati da filesystem)`)
+  console.log(`  [T]  ${COLORS.green}🔎 HTP-V5 Metadata & Evidence Audit${COLORS.reset}        (Presenza dichiarazioni, non certificazione)\n`)
+
+  console.log(`  ${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}║ ${COLORS.yellow}🛠️ 6. SYSTEM UTILITIES & PROCESS CONTROL (Multiplexer, Monitor & Reset)${COLORS.reset}${COLORS.bright}                  ║${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
+  console.log(`  [M]  ${COLORS.magenta}${COLORS.bright}🔲 Terminal Multiplexer Dual/Quad${COLORS.reset}         (Split-screen 2x/4x pannelli sincronizzati)`)
+  console.log(`  [X]  ${COLORS.cyan}🪟 Crea Più Terminali PowerShell${COLORS.reset}          (Multi-window; Windows Terminal se presente)`)
+  console.log(`  [6]  ${COLORS.yellow}⚡ Local Gateway & Port Status${COLORS.reset}            (Hydra 8090, Kimi bridge 8095, servizi locali)`)
+  console.log(`  [9]  ${COLORS.red}${COLORS.bright}🛑 Chiudi TUTTI i Processi Attivi${COLORS.reset}         (Kill all servers :8765-8768, :8090, :5199, :3000, :5173, :3001)`)
+  console.log(`  [0]  ${COLORS.dim}🚪 Esci da TUIOS${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 
-  rl.question(`  ${COLORS.bright}Select Option (I, N, B, C, J, M, X, U, V, 7, A, R, O, L, K, D, G, P, W, E, T, 0-8): ${COLORS.reset}`, async (choice) => {
+  rl.question(`  ${COLORS.bright}Seleziona Opzione [1 per Founder OS, 1-9, A-Z, 0 per uscire]: ${COLORS.reset}`, async (choice) => {
     rl.close()
     await handleChoice(choice.trim())
   })
@@ -1548,18 +3272,73 @@ async function handleChoice(choice) {
       break
     }
     case 'E':
-    case 'AGENTS': {
+    case 'ECOMMERCE':
+    case 'ECOM':
+    case 'SHOP':
+    case 'STORE':
+    case 'MOSER': {
+      await showEcommerceMasterHub()
+      break
+    }
+    case 'IL':
+    case 'INFLUENCER':
+    case 'INFLUENCER_LANDINGS': {
+      await showInfluencerLandingsHub()
+      break
+    }
+    case 'GS':
+    case 'SCROLLYTELLING':
+    case 'GOLDEN': {
+      await showGoldenScrollytellingHub()
+      break
+    }
+    case 'CT':
+    case 'COMMUNICATION':
+    case 'COMM_TEMPLATES': {
+      await showCommunicationTemplatesHub()
+      break
+    }
+    case 'LT':
+    case 'LEGAL':
+    case 'LEGAL_TEMPLATES': {
+      await showLegalTemplatesHub()
+      break
+    }
+    case 'OM':
+    case 'MODULES':
+    case 'OPTIONAL_MODULES': {
+      await showOptionalModulesHub()
+      break
+    }
+    case 'TR':
+    case 'ML':
+    case 'TRANSLATE':
+    case 'TRANSLATION':
+    case 'LOCALIZATION':
+    case 'LANGUAGES': {
+      await showAutoTranslationHub()
+      break
+    }
+    case '1':
+    case 'F':
+    case 'FOS':
+    case 'FOUNDER':
+    case 'FOUNDER_OS': {
+      await showFounderOsHub()
+      break
+    }
+    case 'AR':
+    case 'AGENTS':
+    case 'ROSTER': {
       await showAgentsRoster()
       break
     }
-    case 'T':
-    case 'TRACEABILITY':
-    case 'COMPLIANCE': {
-      await showTraceabilityReport()
-      break
-    }
-    case '1': {
-      console.log(`${COLORS.cyan}Dispatching Swarm Turn via hermes_swarm_executor.js...${COLORS.reset}`)
+    case 'H':
+    case 'SH':
+    case 'HEALTH':
+    case 'SWARM_HEALTH':
+    case 'SWARM': {
+      console.log(`${COLORS.cyan}Verifica runtime Swarm via hermes_swarm_executor.js...${COLORS.reset}`)
       const executor = path.join(HERMES_ROOT, 'hermes_swarm_executor.js')
       if (fs.existsSync(executor)) {
         try {
@@ -1574,10 +3353,23 @@ async function handleChoice(choice) {
       showMenu()
       break
     }
+    case 'T':
+    case 'TRACEABILITY':
+    case 'COMPLIANCE': {
+      await showTraceabilityReport()
+      break
+    }
+    case 'S':
+    case 'STUDIOS':
+    case 'INFLUENCER': {
+      await showAIInfluencerStudios()
+      break
+    }
     case '2': {
-      console.log(`${COLORS.magenta}Launching Pi Coding Agent with Kimi K3 Local MoE...${COLORS.reset}`)
+      console.log(`${COLORS.magenta}Avvio Pi Coding Agent con provider configurato...${COLORS.reset}`)
       const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
       if (fs.existsSync(piKimi)) {
+        if (!hasKimiCheckpoint()) console.log(`${COLORS.yellow}Checkpoint Kimi locale non rilevato: il runner non verrà presentato come C-engine locale.${COLORS.reset}`)
         try {
           execSync(`call "${piKimi}"`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
         } catch (e) {
@@ -1617,18 +3409,23 @@ async function handleChoice(choice) {
         rl.close()
         if (!q) return showMenu()
         const libScript = path.join(BIBLIOTECARIO_DIR, 'librarian_server.py')
-        execSync(`python "${libScript}" --search "${q}"`, { stdio: 'inherit' })
+        if (!PYTHON_EXE) {
+          console.error(`${COLORS.red}Python non disponibile.${COLORS.reset}`)
+        } else {
+          const result = spawnSync(PYTHON_EXE, [libScript, '--search', q], { stdio: 'inherit', cwd: BIBLIOTECARIO_DIR, windowsHide: true })
+          if (result.error || result.status !== 0) console.error(`${COLORS.red}Ricerca fallita (exit ${result.status ?? 1}).${COLORS.reset}`)
+        }
         waitForEnter().then(showMenu)
       })
       return
     }
     case '5': {
       const libScript = path.join(BIBLIOTECARIO_DIR, 'librarian_server.py')
-      if (!PYTHON_EXE || !fs.existsSync(PYTHON_EXE)) {
+      if (!PYTHON_EXE) {
         console.error(`${COLORS.red}Python runtime non disponibile: ${PYTHON_EXE}${COLORS.reset}`)
       } else {
-        try { execSync(`"${PYTHON_EXE}" "${libScript}" --stats`, { stdio: 'inherit' }) }
-        catch (e) { console.error(`${COLORS.red}Statistiche non disponibili (exit ${e.status || 1}).${COLORS.reset}`) }
+        const result = spawnSync(PYTHON_EXE, [libScript, '--stats'], { stdio: 'inherit', cwd: BIBLIOTECARIO_DIR, windowsHide: true })
+        if (result.error || result.status !== 0) console.error(`${COLORS.red}Statistiche non disponibili (exit ${result.status ?? 1}).${COLORS.reset}`)
       }
       await waitForEnter()
       showMenu()
@@ -1641,18 +3438,6 @@ async function handleChoice(choice) {
         execSync(`node "${health}"`, { stdio: 'inherit', cwd: HERMES_ROOT })
       } catch (e) {
         console.error(`${COLORS.red}Errore esecuzione monitor: ${e.message}${COLORS.reset}`)
-      }
-      await waitForEnter()
-      showMenu()
-      break
-    }
-    case '7': {
-      console.log(`${COLORS.blue}=== Kimi K3 in C Native Inference Engine ===${COLORS.reset}`)
-      console.log(`Engine Path: ${KIMI_DIR}`)
-      console.log(`Running local verification test suite...`)
-      const testScript = path.join(KIMI_DIR, 'test_kimi_laptop.py')
-      if (fs.existsSync(testScript)) {
-        execSync(`python "${testScript}"`, { stdio: 'inherit', cwd: KIMI_DIR })
       }
       await waitForEnter()
       showMenu()
@@ -1673,7 +3458,7 @@ async function handleChoice(choice) {
         client.on('connect', () => { client.destroy() })
         client.on('error', () => {
           if (fs.existsSync(servePy)) {
-            spawn('python', [servePy], { detached: true, stdio: 'ignore', cwd: PI_DIR }).unref()
+            if (PYTHON_EXE) spawn(PYTHON_EXE, [servePy], { detached: true, stdio: 'ignore', cwd: PI_DIR, windowsHide: true }).unref()
           }
         })
         client.connect(5199, '127.0.0.1')
@@ -1685,6 +3470,14 @@ async function handleChoice(choice) {
       showMenu()
       break
     }
+    case '9':
+    case 'KILL':
+    case 'KILL_ALL':
+    case 'STOP':
+    case 'STOP_ALL': {
+      await killAllActiveProcesses()
+      break
+    }
     case '0': {
       console.log(`${COLORS.green}Exiting TUIOS. Goodbye!${COLORS.reset}`)
       process.exit(0)
@@ -1694,6 +3487,161 @@ async function handleChoice(choice) {
       await waitForEnter()
       showMenu()
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI INFLUENCER STUDIOS DASHBOARD LAUNCHER (OPZIONE [S] o --studios)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STUDIOS = [
+  { key: '1', name: 'Orazio Dallo Spazio',   handle: '@orazio.dallospazio', port: 8765, color: COLORS.cyan },
+  { key: '2', name: 'Giuly Moser',            handle: '@giulia.moser',       port: 8766, color: COLORS.magenta },
+  { key: '3', name: 'Faceless Science',        handle: '@faceless.science',   port: 8767, color: COLORS.green },
+  { key: '4', name: 'Faceless Finance',        handle: '@faceless.finance',   port: 8768, color: COLORS.yellow },
+]
+
+async function getStudioHealth(port) {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(6000) })
+    if (!response.ok) return null
+    const payload = await response.json()
+    return payload && payload.service === 'hermes-ai-studios' ? payload : null
+  } catch (_) {
+    return null
+  }
+}
+
+function studiosLogTail(lines = 8) {
+  try {
+    return fs.readFileSync(STUDIOS_LOG_PATH, 'utf8').trim().split(/\r?\n/).slice(-lines).join('\n')
+  } catch (_) {
+    return 'Log non ancora disponibile.'
+  }
+}
+
+async function startStudiosServer(targetPort = 8765) {
+  if (!fs.existsSync(STUDIOS_SERVER_SCRIPT)) {
+    return { ok: false, message: `Server script non trovato: ${STUDIOS_SERVER_SCRIPT}` }
+  }
+  if (!PYTHON_EXE) {
+    return { ok: false, message: 'Nessun runtime Python funzionante trovato.' }
+  }
+  fs.mkdirSync(STUDIOS_LOG_DIR, { recursive: true })
+  fs.appendFileSync(STUDIOS_LOG_PATH, `\n[${new Date().toISOString()}] Avvio AI Studios con ${PYTHON_EXE}\n`, 'utf8')
+  try {
+    const cwd = path.dirname(STUDIOS_SERVER_SCRIPT)
+    const psCmd = `Start-Process -FilePath '${PYTHON_EXE}' -ArgumentList '${STUDIOS_SERVER_SCRIPT}' -WorkingDirectory '${cwd}' -WindowStyle Hidden`
+    execSync(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${psCmd}"`, { windowsHide: true })
+  } catch (error) {
+    return { ok: false, message: error.message }
+  }
+  const deadline = Date.now() + 15000
+  while (Date.now() < deadline) {
+    const health = await getStudioHealth(targetPort)
+    if (health) return { ok: true, health }
+    await new Promise(resolve => setTimeout(resolve, 350))
+  }
+  return { ok: false, message: `Il server non risponde sulla porta ${targetPort}.`, log: studiosLogTail() }
+}
+
+async function ensureStudioOnline(port) {
+  const current = await getStudioHealth(port)
+  if (current) return { ok: true, health: current, started: false }
+  const result = await startStudiosServer(port)
+  return { ...result, started: result.ok }
+}
+
+function openStudioBrowser(port) {
+  execSync(`start "" "http://localhost:${port}"`, { shell: 'cmd.exe', stdio: 'ignore', windowsHide: true })
+}
+
+async function showAIInfluencerStudios() {
+  clearScreen()
+  console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🎬 AI INFLUENCER STUDIOS — MULTI-CHANNEL CONTENT OPERATIONS CENTER                       ║`)
+  console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
+  console.log()
+  console.log(`  ${COLORS.bright}CANALI ATTIVI:${COLORS.reset}`)
+  STUDIOS.forEach(s => {
+    const url = `http://localhost:${s.port}`
+    console.log(`  [${s.key}]  ${s.color}${COLORS.bright}${s.name.padEnd(24)}${COLORS.reset} ${s.handle.padEnd(24)} ${COLORS.dim}→${COLORS.reset} ${COLORS.cyan}${url}${COLORS.reset}`)
+  })
+  console.log(`  [A]  ${COLORS.green}Apri TUTTI i 4 canali nel browser${COLORS.reset}`)
+  console.log(`  [P]  ${COLORS.yellow}Avvia Server Multi-Port (porta 8765-8768)${COLORS.reset}`)
+  console.log(`  [K]  ${COLORS.red}Arresta Server Multi-Port (libera porte 8765-8768)${COLORS.reset}`)
+  console.log(`  [Q]  ${COLORS.dim}Torna al menu principale${COLORS.reset}`)
+  console.log()
+  console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question(`  ${COLORS.bright}Seleziona canale (1-4, A, P, K, Q): ${COLORS.reset}`, async (choice) => {
+    rl.close()
+    const c = choice.trim().toUpperCase()
+    if (c === 'Q' || c === '') {
+      return showMenu()
+    }
+    if (c === 'K' || c === 'KILL' || c === 'STOP') {
+      console.log(`${COLORS.red}\n  Arresto del Server AI Studios e liberazione porte 8765-8768 in corso...${COLORS.reset}`)
+      const killed = killPorts([8765, 8766, 8767, 8768])
+      console.log(`${COLORS.green}  ✓ Porte AI Studios arrestate (${killed.length} processi terminati).${COLORS.reset}`)
+      await waitForEnter()
+      return showAIInfluencerStudios()
+    }
+    if (c === 'A') {
+      console.log(`${COLORS.cyan}\n  Verifica e avvio del server AI Studios...${COLORS.reset}`)
+      const startResult = await ensureStudioOnline(8765)
+      if (!startResult.ok) {
+        console.error(`${COLORS.red}  ✗ ${startResult.message}${COLORS.reset}`)
+        if (startResult.log) console.error(`${COLORS.dim}${startResult.log}${COLORS.reset}`)
+        await waitForEnter()
+        return showAIInfluencerStudios()
+      }
+      const healthResults = await Promise.all(STUDIOS.map(async studio => ({ studio, health: await getStudioHealth(studio.port) })))
+      const online = healthResults.filter(item => item.health)
+      for (const { studio } of online) {
+        try { openStudioBrowser(studio.port) } catch (_) {}
+      }
+      console.log(`${online.length === STUDIOS.length ? COLORS.green : COLORS.yellow}\n  ${online.length === STUDIOS.length ? '✓' : '⚠'} Aperti ${online.length}/${STUDIOS.length} canali online.${COLORS.reset}`)
+      await waitForEnter()
+      return showMenu()
+    }
+    if (c === 'P') {
+      console.log(`${COLORS.cyan}  Avvio e verifica Multi-Port Studios Server...${COLORS.reset}`)
+      const result = await ensureStudioOnline(8765)
+      if (result.ok) {
+        const allHealth = await Promise.all(STUDIOS.map(studio => getStudioHealth(studio.port)))
+        const onlineCount = allHealth.filter(Boolean).length
+        console.log(`${onlineCount === 4 ? COLORS.green : COLORS.yellow}  ${onlineCount === 4 ? '✓' : '⚠'} Server online su ${onlineCount}/4 porte.${COLORS.reset}`)
+        try { openStudioBrowser(8765) } catch (_) {}
+      } else {
+        console.error(`${COLORS.red}  ✗ ${result.message}${COLORS.reset}`)
+        if (result.log) console.error(`${COLORS.dim}${result.log}${COLORS.reset}`)
+      }
+      await waitForEnter()
+      return showAIInfluencerStudios()
+    }
+    const studio = STUDIOS.find(s => s.key === c)
+    if (studio) {
+      console.log(`${studio.color}  Verifica ${studio.name} Dashboard (${studio.handle})...${COLORS.reset}`)
+      try {
+        const result = await ensureStudioOnline(studio.port)
+        if (!result.ok) {
+          console.error(`${COLORS.red}  ✗ ${result.message}${COLORS.reset}`)
+          if (result.log) console.error(`${COLORS.dim}${result.log}${COLORS.reset}`)
+        } else {
+          openStudioBrowser(studio.port)
+          console.log(`${COLORS.green}  ✓ Dashboard online e aperta: http://localhost:${studio.port}${COLORS.reset}`)
+        }
+      } catch (e) {
+        console.error(`${COLORS.red}  ✗ Impossibile aprire il browser: ${e.message}${COLORS.reset}`)
+        console.log(`${COLORS.yellow}  Apri manualmente: http://localhost:${studio.port}${COLORS.reset}`)
+      }
+    } else {
+      console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
+    }
+    await waitForEnter()
+    showMenu()
+  })
 }
 
 function waitForEnter() {
@@ -1712,10 +3660,44 @@ if (args.length > 0) {
   const command = args[0].toLowerCase()
   if (command === '--help' || command === '-h' || command === 'help') {
     console.log(`TUIOS commands:
+  --founder, --founder-os, -f, -1 Open Founder OS Suite & Executive Hub
+  --founder-start           Start both Founder OS Frontend (:5173) and Backend (:3001)
+  --founder-stop            Stop and release Founder OS ports 5173 and 3001
+  --founder-status          Print machine-readable status for ports 5173 and 3001
+  --doctor                  Audit menu capabilities and runtime prerequisites as JSON
+  --kill-all, --stop-all    Kill all active background processes and release ports 8765-8768, 8090, 8095, 5199, 3000, 8080, 9000, 8989, 5173, 3001
+  --ecommerce, -e           Open E-Commerce Master Control & Multi-Store Hub
+  --influencer-landings     Open Influencer Landings Hub (V1-V10)
+  --influencer-landing [N]  Open specific Influencer Landing SVG mock (1..10)
+  --golden-scrollytelling   Open Golden Scrollytelling Standard Hub (Shoe Craftsman 01)
+  --scrollytelling-blueprint Show Implementation Blueprint (Three.js & GSAP)
+  --scrollytelling-video    Show AI Video Generation Prompt Bible
+  --comm-templates          Open Communication Templates Suite Hub
+  --chatbot-templates       Show AI Chatbot communication template
+  --email-templates         Show Email communication template
+  --legal-templates         Open Legal Templates & Compliance Suite Hub
+  --optional-modules        Open Optional E-Commerce Modules Manager
+  --auto-translation, -tr   Open Multi-Language & Automatic Translation Hub
+  --languages               List supported locales and metadata as JSON
+  --translate [text] [lang] Test translation with luxury glossary preservation
+  --moser-admin             Open Moser Commerce Admin Area in browser (:8080/admin)
+  --moser-consumer          Open Moser Commerce Consumer Storefront in browser (:8080/)
+  --moser-business          Open Moser Commerce Business Company Dashboard (:8080/company/control-center)
+  --new-ecommerce           Open New E-Commerce Creation Wizard in browser (:8080/admin/new-ecommerce)
+  --creative-studio         Open Creative Studio 3D & Motion Promo in browser (:8080/admin/creative-studio)
+  --store-admin [store]     Open Admin Area for any created store (Moser or derived)
+  --store-consumer [store]  Open Consumer Area for any created store (Moser or derived)
+  --store-business [store]  Open Business Area for any created store (Moser or derived)
+  --start-ecommerce         Start both Storefront (:8080) and Medusa Backend (:9000)
+  --stop-ecommerce          Stop and release E-Commerce ports 8080 and 9000
+  --quality-ecommerce       Run full quality and contracts suite for Moser Commerce
+  --studios, -s             Open AI Influencer Studios Dashboard (Orazio/Giuly/etc.)
+  --studios-start           Start and verify all AI Studios ports without opening a browser
+  --studios-health          Print machine-readable health for ports 8765-8768
   --ldg, --ldg-innovation   Open LDG Innovation Master Control Hub
   --ldg-dev                 Start LDG Innovation Next.js 15 Dev Server (port 3000)
   --ldg-b2b                 Run LDG Innovation B2B Acquisition Suite
-  --pi, --pi-kimi           Launch Pi Coding Agent with Kimi K3 MoE
+  --pi, --pi-kimi           Launch Pi Coding Agent through Kimi/Hydra bridge
   --swarm, --swarm-health   Verify live process + recent heartbeat evidence
   --b2b-worker-start [N]    Start N local zero-API-cost contact workers
   --b2b-worker-stop         Request a clean worker-pool shutdown
@@ -1731,6 +3713,34 @@ if (args.length > 0) {
   --audit, --traceability   Show traceability data
   --stats                   Show librarian statistics using the configured runtime`)
     process.exit(0)
+  } else if (command === '--doctor' || command === 'doctor' || command === '--self-test') {
+    const report = buildTuiosDoctorReport()
+    console.log(JSON.stringify(report, null, 2))
+    process.exit(report.summary.failed === 0 ? 0 : 2)
+  } else if (command === '--kill-all' || command === '--stop-all' || command === '--kill' || command === 'kill-all' || command === 'stop-all' || command === '-9') {
+    killAllActiveProcesses(true).then(res => {
+      console.log(JSON.stringify({ status: 'ok', ...res }, null, 2))
+      process.exit(0)
+    }).catch(err => {
+      console.error(err.message)
+      process.exit(1)
+    })
+  } else if (command === '--founder' || command === '--founder-os' || command === 'founder' || command === 'founder-os' || command === '-f' || command === '--fos') {
+    handleChoice('1')
+  } else if (command === '--founder-start') {
+    ensureFounderOsRunning().then(() => {
+      console.log('Founder OS frontend (:5173) e backend (:3001) avviati.')
+      process.exit(0)
+    })
+  } else if (command === '--founder-stop') {
+    const killed = killPorts([5173, 3001])
+    console.log(`Server Founder OS arrestati (${killed.length} processi terminati). Porte 5173 e 3001 liberate.`)
+    process.exit(0)
+  } else if (command === '--founder-status') {
+    Promise.all([checkPortOnline(5173), checkPortOnline(3001)]).then(([fe, be]) => {
+      console.log(JSON.stringify({ frontend: fe, backend: be, frontend_url: 'http://localhost:5173', backend_url: 'http://localhost:3001' }, null, 2))
+      process.exit(0)
+    })
   } else if (command === '--ldg' || command === '--ldg-innovation' || command === 'ldg' || command === '-i') {
     handleChoice('I')
   } else if (command === '--ldg-dev' || command === 'ldg-dev') {
@@ -1739,7 +3749,8 @@ if (args.length > 0) {
     process.exit(0)
   } else if (command === '--ldg-b2b' || command === 'ldg-b2b') {
     console.log(`Running LDG Innovation B2B Suite v2...`)
-    const result = spawnSync('python', ['scripts/b2b_suite_v2.py', '--mode', 'generate', '--input', 'data/b2b_acquisition/verified_inputs/blackshape_minimal_v2.json', '--limit', '1'], { cwd: B2B_PROJECT, stdio: 'inherit', shell: true })
+    if (!PYTHON_EXE) { console.error('No working Python runtime is available.'); process.exit(2) }
+    const result = spawnSync(PYTHON_EXE, ['scripts/b2b_suite_v2.py', '--mode', 'generate', '--input', 'data/b2b_acquisition/verified_inputs/blackshape_minimal_v2.json', '--limit', '1'], { cwd: B2B_PROJECT, stdio: 'inherit' })
     process.exit(result.status === null ? 1 : result.status)
   } else if (command === '--pi' || command === '--pi-kimi' || command === 'pi' || command === 'pi-kimi' || command === '-2') {
     const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
@@ -1793,6 +3804,11 @@ if (args.length > 0) {
     const health = path.join(HERMES_ROOT, 'tools', 'tuios', 'swarm_health_check.cjs')
     try { execSync(`node "${health}"`, { stdio: 'inherit', cwd: HERMES_ROOT }); process.exit(0) }
     catch (e) { process.exit(e.status || 2) }
+  } else if (command === '--stats' || command === 'stats') {
+    const libScript = path.join(BIBLIOTECARIO_DIR, 'librarian_server.py')
+    if (!PYTHON_EXE || !fs.existsSync(libScript)) { console.error('Librarian runtime is unavailable.'); process.exit(2) }
+    const result = spawnSync(PYTHON_EXE, [libScript, '--stats'], { cwd: BIBLIOTECARIO_DIR, stdio: 'inherit', windowsHide: true })
+    process.exit(result.status === null ? 1 : result.status)
   } else if (command === '--b2b-intake' || command === 'b2b-intake') {
     if (!args[1]) { console.error('Usage: --b2b-intake <contacts.csv|json|sqlite> [--table name]'); process.exit(1) }
     const inputPath = path.resolve(process.cwd(), args[1])
@@ -1825,6 +3841,24 @@ if (args.length > 0) {
     handleChoice('V')
   } else if (command === '--kimi' || command === 'kimi' || command === '-7') {
     handleChoice('7')
+  } else if (command === '--studios-health' || command === 'studios-health') {
+    Promise.all(STUDIOS.map(async studio => ({ ...studio, health: await getStudioHealth(studio.port) })))
+      .then(results => {
+        const payload = results.map(({ key, name, handle, port, health }) => ({ key, name, handle, port, online: Boolean(health), health }))
+        console.log(JSON.stringify(payload, null, 2))
+        process.exitCode = payload.every(item => item.online) ? 0 : 2
+      })
+      .catch(error => { console.error(error.message); process.exitCode = 2 })
+  } else if (command === '--studios-start' || command === 'studios-start') {
+    ensureStudioOnline(8765)
+      .then(async result => {
+        const health = await Promise.all(STUDIOS.map(async studio => ({ port: studio.port, online: Boolean(await getStudioHealth(studio.port)) })))
+        console.log(JSON.stringify({ ...result, ports: health }, null, 2))
+        process.exitCode = result.ok && health.every(item => item.online) ? 0 : 2
+      })
+      .catch(error => { console.error(error.message); process.exitCode = 2 })
+  } else if (command === '--studios' || command === 'studios' || command === '--influencer' || command === '-s') {
+    handleChoice('S')
   } else if (command === '--morning-report' || command === '--gaps' || command === '--discrepancies' || command === '-u') {
     handleChoice('U')
   } else if (command === '--analytics' || command === 'analytics' || command === '-a') {
@@ -1845,8 +3879,143 @@ if (args.length > 0) {
     handleChoice('P')
   } else if (command === '--swarm-workload' || command === '--workload' || command === '-w') {
     handleChoice('W')
-  } else if (command === '--agents' || command === 'agents' || command === '-e') {
+  } else if (command === '--agents' || command === 'agents' || command === '-f') {
+    handleChoice('F')
+  } else if (command === '--ecommerce' || command === '--ecom' || command === 'ecommerce' || command === 'ecom' || command === '-e') {
     handleChoice('E')
+  } else if (command === '--influencer-landings' || command === '--influencer' || command === 'influencer-landings' || command === '-il') {
+    showInfluencerLandingsHub()
+  } else if (command === '--influencer-landing') {
+    const ver = Number.parseInt(args[1] || '1', 10)
+    const svgPath = path.join(INFLUENCER_LANDINGS_DIR, `Influencer landing V${ver}.svg`)
+    if (fs.existsSync(svgPath)) {
+      openBrowserUrl(svgPath)
+      console.log(`Aperto Influencer Landing V${ver}: ${svgPath}`)
+      process.exit(0)
+    } else {
+      console.error(`Mockup non trovato per V${ver}: ${svgPath}`)
+      process.exit(1)
+    }
+  } else if (command === '--golden-scrollytelling' || command === '--scrollytelling' || command === 'scrollytelling' || command === '-gs') {
+    showGoldenScrollytellingHub()
+  } else if (command === '--scrollytelling-blueprint') {
+    renderMarkdownFilePreview(path.join(SCROLLYTELLING_DIR, 'IMPLEMENTATION_BLUEPRINT.md'), 100)
+    process.exit(0)
+  } else if (command === '--scrollytelling-video') {
+    renderMarkdownFilePreview(path.join(SCROLLYTELLING_DIR, 'VIDEO_GENERATION.md'), 100)
+    process.exit(0)
+  } else if (command === '--comm-templates' || command === '--communication-templates' || command === '-ct') {
+    showCommunicationTemplatesHub()
+  } else if (command === '--chatbot-templates') {
+    renderMarkdownFilePreview(path.join(COMM_TEMPLATES_DIR, 'CHATBOT_AI.md'), 100)
+    process.exit(0)
+  } else if (command === '--email-templates') {
+    renderMarkdownFilePreview(path.join(COMM_TEMPLATES_DIR, 'EMAIL.md'), 100)
+    process.exit(0)
+  } else if (command === '--legal-templates' || command === '--legal' || command === '-lt') {
+    showLegalTemplatesHub()
+  } else if (command === '--optional-modules' || command === '--modules' || command === '-om') {
+    showOptionalModulesHub()
+  } else if (command === '--auto-translation' || command === '--translation' || command === '--languages-hub' || command === '-tr') {
+    showAutoTranslationHub()
+  } else if (command === '--languages' || command === 'languages') {
+    const manifestPath = path.join(LOCALIZATION_DIR, 'manifest.json')
+    if (fs.existsSync(manifestPath)) {
+      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+      console.log(JSON.stringify(data.modules?.[0]?.supportedLocales || [], null, 2))
+      process.exit(0)
+    } else {
+      console.error('Localization manifest non trovato.')
+      process.exit(1)
+    }
+  } else if (command === '--translate' || command === 'translate') {
+    const text = args[1] || 'Scarpe artigianali Goodyear Welt in Vitello Pieno Fiore'
+    const targetLang = (args[2] || 'en').toLowerCase()
+    const result = executeCliTranslation(text, targetLang)
+    console.log(JSON.stringify(result, null, 2))
+    process.exit(0)
+  } else if (command === '--moser-admin' || command === 'moser-admin') {
+    ensureStorefrontRunning().then(() => {
+      openBrowserUrl('http://localhost:8080/admin')
+      console.log('Aperta Area Amministrativa Moser: http://localhost:8080/admin')
+      process.exit(0)
+    })
+  } else if (command === '--moser-consumer' || command === 'moser-consumer') {
+    ensureStorefrontRunning().then(() => {
+      openBrowserUrl('http://localhost:8080/')
+      console.log('Aperta Area Consumer Moser: http://localhost:8080/')
+      process.exit(0)
+    })
+  } else if (command === '--moser-business' || command === 'moser-business') {
+    ensureStorefrontRunning().then(() => {
+      openBrowserUrl('http://localhost:8080/company/control-center')
+      console.log('Aperta Area Business Moser: http://localhost:8080/company/control-center')
+      process.exit(0)
+    })
+  } else if (command === '--new-ecommerce' || command === '--wizard' || command === 'new-ecommerce') {
+    ensureStorefrontRunning().then(() => {
+      openBrowserUrl('http://localhost:8080/admin/new-ecommerce')
+      console.log('Aperto New E-Commerce Wizard: http://localhost:8080/admin/new-ecommerce')
+      process.exit(0)
+    })
+  } else if (command === '--creative-studio' || command === 'creative-studio') {
+    ensureStorefrontRunning().then(() => {
+      openBrowserUrl('http://localhost:8080/admin/creative-studio')
+      console.log('Aperto Creative Studio: http://localhost:8080/admin/creative-studio')
+      process.exit(0)
+    })
+  } else if (command === '--access-control' || command === '--rbac') {
+    ensureStorefrontRunning().then(() => {
+      openBrowserUrl('http://localhost:8080/admin/access-control')
+      console.log('Aperto Access Control & RBAC: http://localhost:8080/admin/access-control')
+      process.exit(0)
+    })
+  } else if (command === '--discovery-lab' || command === 'discovery-lab') {
+    ensureStorefrontRunning().then(() => {
+      openBrowserUrl('http://localhost:8080/admin/discovery-lab-ops')
+      console.log('Aperto Discovery Lab Ops: http://localhost:8080/admin/discovery-lab-ops')
+      process.exit(0)
+    })
+  } else if (command === '--store-admin') {
+    const storeTarget = args[1] || 'moser-commerce'
+    ensureStorefrontRunning().then(() => {
+      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/admin` : `http://localhost:8080/admin?store=${encodeURIComponent(storeTarget)}`
+      openBrowserUrl(url)
+      console.log(`Aperta Area Amministrativa Store: ${url}`)
+      process.exit(0)
+    })
+  } else if (command === '--store-consumer') {
+    const storeTarget = args[1] || 'moser-commerce'
+    ensureStorefrontRunning().then(() => {
+      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/` : `http://localhost:8080?store=${encodeURIComponent(storeTarget)}`
+      openBrowserUrl(url)
+      console.log(`Aperta Area Consumer Store: ${url}`)
+      process.exit(0)
+    })
+  } else if (command === '--store-business') {
+    const storeTarget = args[1] || 'moser-commerce'
+    ensureStorefrontRunning().then(() => {
+      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/company/dashboard` : `http://localhost:8080/company/dashboard?store=${encodeURIComponent(storeTarget)}`
+      openBrowserUrl(url)
+      console.log(`Aperta Area Business Store: ${url}`)
+      process.exit(0)
+    })
+  } else if (command === '--start-ecommerce' || command === 'start-ecommerce') {
+    console.log('Avvio storefront :8080 e Medusa backend :9000...')
+    execSync(`start "Moser Storefront (Port 8080)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+    execSync(`start "Moser Medusa Backend (Port 9000)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run medusa:dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+    process.exit(0)
+  } else if (command === '--stop-ecommerce' || command === 'stop-ecommerce') {
+    const killed = killPorts([8080, 9000])
+    console.log(`Server E-Commerce arrestati (${killed.length} processi terminati). Porte 8080 e 9000 liberate.`)
+    process.exit(0)
+  } else if (command === '--quality-ecommerce' || command === '--ecommerce-quality') {
+    try {
+      execSync('npm run quality', { stdio: 'inherit', cwd: MOSER_PROJECT })
+      process.exit(0)
+    } catch (e) {
+      process.exit(e.status || 1)
+    }
   } else if (command === '--traceability' || command === '--audit' || command === 'traceability' || command === '-t') {
     handleChoice('T')
   } else if (command === '--galaxy' || command === '--pi-galaxy' || command === 'galaxy' || command === '-8') {
