@@ -28,9 +28,44 @@ const FOUNDER_OS_BACKEND = path.join(FOUNDER_OS_DIR, 'backend')
 const FOUNDER_OS_DB = path.join(FOUNDER_OS_BACKEND, 'data', 'founder-os.db')
 const FOUNDER_OS_FRONTEND_BAT = path.join(FOUNDER_OS_FRONTEND, 'start.bat')
 const FOUNDER_OS_BACKEND_BAT = path.join(FOUNDER_OS_BACKEND, 'start.bat')
+const DON_GENNARO_PROJECT = path.join(HERMES_ROOT, 'mechaHD', 'don-gennaro-calzature-napoli')
+const DON_GENNARO_PORT = 3005
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DYNAMIC PORT MANAGER INTEGRATION (Zero hardcoded ports)
+// ─────────────────────────────────────────────────────────────────────────────
+const PORT_MANAGER_SCRIPT = path.join(HERMES_ROOT, 'hermes-agent', 'apps', 'desktop', 'electron', 'port-manager.cjs')
+let portManagerInstance = null
+
+function getPortManager() {
+  if (!portManagerInstance) {
+    if (fs.existsSync(PORT_MANAGER_SCRIPT)) {
+      const { PortManager } = require(PORT_MANAGER_SCRIPT)
+      portManagerInstance = new PortManager({ hermesHome: HERMES_ROOT })
+    } else {
+      class FallbackPortManager {
+        async allocatePort(project, preferred = 8080, category = 'frontend') {
+          return { port: preferred, category }
+        }
+        getProjectPort() { return null }
+      }
+      portManagerInstance = new FallbackPortManager()
+    }
+  }
+  return portManagerInstance
+}
+
+async function getEcommercePorts() {
+  const pm = getPortManager()
+  const storefront = await pm.allocatePort('moser-commerce', 8080, 'frontend')
+  const medusa = await pm.allocatePort('moser-medusa', 9000, 'service')
+  return { storefrontPort: storefront.port, medusaPort: medusa.port }
+}
+
 function resolvePythonExecutable() {
   const candidates = [
     process.env.HERMES_STUDIOS_PYTHON,
+    path.join(HERMES_ROOT, 'mechaHD', 'Hermes-AI-Studios', 'runtime', 'python', 'python.exe'),
     path.join('C:\\Users\\Deglu\\.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'python', 'python.exe'),
     path.join(HERMES_ROOT, 'hermes-agent', 'venv', 'Scripts', 'python.exe'),
     path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python', 'Python312', 'python.exe'),
@@ -105,7 +140,7 @@ async function killAllActiveProcesses(silent = false) {
     console.log(`  ${COLORS.yellow}Arresto in corso di tutti i server, daemon, worker e processi workspace...${COLORS.reset}\n`)
   }
 
-  const targetPorts = [8765, 8766, 8767, 8768, 8090, 8095, 5199, 3000, 8080, 9000, 8989, 5173, 3001]
+  const targetPorts = [8765, 8766, 8767, 8768, 8769, 8090, 8095, 5199, 3000, 8080, 9000, 8989, 5173, 3001, 3005]
   const killedPids = new Set()
   const killedDetails = []
 
@@ -287,7 +322,7 @@ function buildTuiosDoctorReport() {
   const openChatCutProbe = probeProcess(process.execPath, [path.join(HERMES_ROOT, 'tools', 'openchatcut', 'openchatcut-cli.js'), '--self-test'], 20000)
   const galaxyProbe = probeHttpJson('http://127.0.0.1:5199/api/telemetry', 7000)
   const hydraProbe = probeHttpJson('http://127.0.0.1:8090/v1/status', 7000)
-  const studiosProbes = [8765, 8766, 8767, 8768].map(port => ({ port, ...probeHttpJson(`http://127.0.0.1:${port}/api/health`, 5000) }))
+  const studiosProbes = [8765, 8766, 8767, 8768, 8769].map(port => ({ port, ...probeHttpJson(`http://127.0.0.1:${port}/api/health`, 5000) }))
   const piCli = path.join(PI_DIR, 'packages', 'coding-agent', 'dist', 'cli.js')
   const piProbe = probeProcess(process.execPath, [piCli, '--version'], 30000)
   const swarmProbe = probeProcess(process.execPath, [path.join(HERMES_ROOT, 'hermes_swarm_executor.js'), '--health'], 20000)
@@ -1202,7 +1237,7 @@ async function showLdgInnovationHub() {
     switch (c) {
       case '1': {
         console.log(`${COLORS.green}Avvio Next.js Dev Server per LDG Innovation...${COLORS.reset}`)
-        execSync(`start "LDG Innovation Next.js (Port 3000)" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'; npm run dev"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+        execSync(`start "LDG Innovation Next.js (Port 3000)" cmd.exe /k "cd /d \"${B2B_PROJECT}\" && npm run dev"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
         await waitForEnter()
         showLdgInnovationHub()
         break
@@ -1232,7 +1267,7 @@ async function showLdgInnovationHub() {
         const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
         if (fs.existsSync(piKimi)) {
           if (!hasKimiCheckpoint()) console.log(`${COLORS.yellow}Nota: checkpoint Kimi locale non rilevato; il runner userà solo un provider realmente configurato.${COLORS.reset}`)
-          execSync(`start "Pi Coding Agent - LDG Workspace" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'; & '${piKimi}'"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+          execSync(`start "Pi Coding Agent - LDG Workspace" cmd.exe /k "cd /d \"${B2B_PROJECT}\" && call \"${piKimi}\""`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
         } else {
           console.error(`${COLORS.red}Runner Pi non trovato: ${piKimi}${COLORS.reset}`)
         }
@@ -1250,7 +1285,7 @@ async function showLdgInnovationHub() {
       }
       case '6': {
         console.log(`${COLORS.blue}Apertura console workspace per LDG Innovation...${COLORS.reset}`)
-        execSync(`start "LDG Innovation Workspace" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+        execSync(`start "LDG Innovation Workspace" cmd.exe /k "cd /d \"${B2B_PROJECT}\""`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
         await waitForEnter()
         showLdgInnovationHub()
         break
@@ -1506,34 +1541,136 @@ async function showFounderOsHub() {
 }
 
 async function ensureStorefrontRunning() {
-  const isOnline = await checkPortOnline(8080)
+  const { storefrontPort } = await getEcommercePorts()
+  const isOnline = await checkPortOnline(storefrontPort)
   if (!isOnline) {
-    console.log(`${COLORS.yellow}Avvio Storefront Vite in corso (porta 8080)...${COLORS.reset}`)
-    execSync(`start "Moser Storefront (Port 8080)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+    console.log(`${COLORS.yellow}Avvio Storefront Vite in corso via PortManager (porta ${storefrontPort})...${COLORS.reset}`)
+    const launchScript = path.join(MOSER_PROJECT, 'scripts', 'launch-with-port-manager.cjs')
+    if (fs.existsSync(launchScript)) {
+      execSync(`start "Moser Storefront (Port ${storefrontPort})" node "${launchScript}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+    } else {
+      execSync(`start "Moser Storefront (Port ${storefrontPort})" cmd.exe /k "cd /d \"${MOSER_PROJECT}\" && npm run dev -- --port ${storefrontPort}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+    }
     await new Promise(r => setTimeout(r, 2500))
   }
 }
 
-async function checkEcommerceHealth() {
-  const [storefront, medusa, storage] = await Promise.all([
-    checkPortOnline(8080),
-    checkPortOnline(9000),
-    checkPortOnline(8989),
-  ])
-  return { storefront, medusa, storage }
+function isDonGennaroListening(port) {
+  return new Promise((resolve) => {
+    const http = require('node:http')
+    const req = http.get({
+      hostname: '127.0.0.1',
+      port: port,
+      path: '/',
+      timeout: 800
+    }, (res) => {
+      let body = ''
+      res.on('data', chunk => {
+        body += chunk
+        if (body.length > 500) req.destroy()
+      })
+      res.on('close', () => {
+        const isDG = body.toLowerCase().includes('don gennaro') || body.toLowerCase().includes('calzature') || body.toLowerCase().includes('don-gennaro')
+        resolve(isDG)
+      })
+    })
+    req.on('error', () => resolve(false))
+    req.on('timeout', () => { req.destroy(); resolve(false) })
+  })
 }
 
-function getEcommerceStoresList() {
+async function resolveDonGennaroPort() {
+  const pm = getPortManager()
+  const preferred = DON_GENNARO_PORT || 3005
+
+  // 1. If preferred port is listening, check if it's already Don Gennaro
+  const is3005Listening = await checkPortOnline(preferred)
+  if (is3005Listening) {
+    const isDG = await isDonGennaroListening(preferred)
+    if (isDG) {
+      await pm.allocatePort('don-gennaro-calzature-napoli', preferred, 'frontend')
+      return { port: preferred, isOnline: true, hasConflict: false, preferred }
+    }
+  }
+
+  // 2. If already registered in PortManager, check if that port is running Don Gennaro
+  const existing = pm.allocations?.get ? pm.allocations.get('don-gennaro-calzature-napoli') : null
+  if (existing && existing.port !== preferred) {
+    const isListening = await checkPortOnline(existing.port)
+    if (isListening && (await isDonGennaroListening(existing.port))) {
+      return { port: existing.port, isOnline: true, hasConflict: true, preferred }
+    }
+  }
+
+  // 3. Check for conflict on preferred port
+  let hasConflict = false
+  let targetPort = preferred
+  if (is3005Listening) {
+    hasConflict = true
+    targetPort = preferred + 1
+    while (await checkPortOnline(targetPort)) {
+      targetPort++
+    }
+  }
+
+  const alloc = await pm.allocatePort('don-gennaro-calzature-napoli', targetPort, 'frontend')
+  const finalPort = alloc.port || targetPort
+  const isOnline = await checkPortOnline(finalPort)
+  const isDG = isOnline ? await isDonGennaroListening(finalPort) : false
+
+  return {
+    port: finalPort,
+    isOnline: isDG,
+    hasConflict: hasConflict || finalPort !== preferred,
+    preferred
+  }
+}
+
+async function ensureDonGennaroRunning() {
+  const info = await resolveDonGennaroPort()
+  if (info.isOnline) {
+    return info.port
+  }
+
+  if (info.hasConflict) {
+    console.log(`${COLORS.yellow}  ⚠️ Conflitto su porta ${info.preferred} rilevato (occupata da un altro processo).${COLORS.reset}`)
+    console.log(`${COLORS.cyan}  ⚡ PortManager ha allocato la porta libera: ${info.port}${COLORS.reset}`)
+  } else {
+    console.log(`${COLORS.yellow}Avvio Store Don Gennaro Calzature Napoli su porta ${info.port}...${COLORS.reset}`)
+  }
+
+  const batFile = path.join(DON_GENNARO_PROJECT, 'avvia-store.bat')
+  if (!info.hasConflict && fs.existsSync(batFile)) {
+    execSync(`start "Don Gennaro Calzature Napoli (Port ${info.port})" cmd.exe /c "${batFile}"`, { shell: 'cmd.exe', cwd: DON_GENNARO_PROJECT })
+  } else {
+    execSync(`start "Don Gennaro Calzature Napoli (Port ${info.port})" cmd.exe /k "cd /d \"${DON_GENNARO_PROJECT}\" && npm run dev -- -p ${info.port}"`, { shell: 'cmd.exe', cwd: DON_GENNARO_PROJECT })
+  }
+  await new Promise(r => setTimeout(r, 2500))
+  return info.port
+}
+
+async function checkEcommerceHealth() {
+  const { storefrontPort, medusaPort } = await getEcommercePorts()
+  const [storefront, medusa, storage] = await Promise.all([
+    checkPortOnline(storefrontPort),
+    checkPortOnline(medusaPort),
+    checkPortOnline(8989),
+  ])
+  return { storefront, medusa, storage, storefrontPort, medusaPort }
+}
+
+async function getEcommerceStoresList() {
+  const { storefrontPort } = await getEcommercePorts()
   const stores = [
     {
       id: 'moser-commerce',
       name: 'Moser Luxury Commerce',
       type: 'Core Flagship',
-      port: 8080,
-      url: 'http://localhost:8080',
-      adminUrl: 'http://localhost:8080/admin',
-      consumerUrl: 'http://localhost:8080/',
-      businessUrl: 'http://localhost:8080/company/dashboard',
+      port: storefrontPort,
+      url: `http://localhost:${storefrontPort}`,
+      adminUrl: `http://localhost:${storefrontPort}/admin`,
+      consumerUrl: `http://localhost:${storefrontPort}/`,
+      businessUrl: `http://localhost:${storefrontPort}/company/dashboard`,
       description: 'Piattaforma ammiraglia luxury fashion, lookbook editoriale e Medusa 2.0'
     }
   ]
@@ -1550,9 +1687,10 @@ function getEcommerceStoresList() {
         const pjPath = path.join(pPath, 'project.json')
         let name = entry
         let desc = 'Store derivato catalogato in 01CORE storage'
+        let pj = {}
         if (fs.existsSync(pjPath)) {
           try {
-            const pj = JSON.parse(fs.readFileSync(pjPath, 'utf8'))
+            pj = JSON.parse(fs.readFileSync(pjPath, 'utf8'))
             name = pj.name || entry
             desc = pj.description || desc
           } catch (_) {}
@@ -1560,12 +1698,12 @@ function getEcommerceStoresList() {
         stores.push({
           id: entry,
           name,
-          type: '01CORE Project Store',
-          port: 8080,
-          url: `http://localhost:8080?project=${entry}`,
-          adminUrl: `http://localhost:8080/admin/new-ecommerce?project=${entry}`,
-          consumerUrl: `http://localhost:8080?project=${entry}`,
-          businessUrl: `http://localhost:8080/company/dashboard?project=${entry}`,
+          type: pj.type || '01CORE Project Store',
+          port: storefrontPort,
+          url: pj.url || `http://localhost:${storefrontPort}?project=${entry}`,
+          adminUrl: pj.adminUrl || `http://localhost:${storefrontPort}/admin/new-ecommerce?project=${entry}`,
+          consumerUrl: pj.consumerUrl || `http://localhost:${storefrontPort}?project=${entry}`,
+          businessUrl: pj.businessUrl || `http://localhost:${storefrontPort}/company/dashboard?project=${entry}`,
           description: desc
         })
       }
@@ -1585,16 +1723,26 @@ function getEcommerceStoresList() {
         if (fs.existsSync(pkg)) {
           const already = stores.find(s => s.id.toLowerCase() === item.toLowerCase())
           if (!already) {
+            const isDonGennaro = item.toLowerCase() === 'don-gennaro-calzature-napoli'
+            const sPort = isDonGennaro ? DON_GENNARO_PORT : storefrontPort
+            const sUrl = isDonGennaro ? `http://localhost:${sPort}` : `http://localhost:${storefrontPort}?store=${item.toLowerCase()}`
+            const sAdmin = isDonGennaro ? `http://localhost:${sPort}/v2` : `http://localhost:${storefrontPort}/admin?store=${item.toLowerCase()}`
+            const sConsumer = isDonGennaro ? `http://localhost:${sPort}/` : `http://localhost:${storefrontPort}?store=${item.toLowerCase()}`
+            const sBusiness = isDonGennaro ? `http://localhost:${sPort}/v2#booking` : `http://localhost:${storefrontPort}/company/dashboard?store=${item.toLowerCase()}`
+            const sDesc = isDonGennaro
+              ? 'Don Gennaro Esposito · Calzature Napoletane su Misura dal 1952 (Next.js 15, Three.js & Scrollytelling)'
+              : `Workspace autonomo in mechaHD/${item}`
+
             stores.push({
               id: item.toLowerCase(),
-              name: item,
-              type: 'Standalone Workspace Store',
-              port: 8080,
-              url: `http://localhost:8080?store=${item.toLowerCase()}`,
-              adminUrl: `http://localhost:8080/admin?store=${item.toLowerCase()}`,
-              consumerUrl: `http://localhost:8080?store=${item.toLowerCase()}`,
-              businessUrl: `http://localhost:8080/company/dashboard?store=${item.toLowerCase()}`,
-              description: `Workspace autonomo in mechaHD/${item}`
+              name: isDonGennaro ? 'Don Gennaro · Calzature Napoletane dal 1952' : item,
+              type: isDonGennaro ? 'Bespoke Footwear Flagship (Next.js 15)' : 'Standalone Workspace Store',
+              port: sPort,
+              url: sUrl,
+              adminUrl: sAdmin,
+              consumerUrl: sConsumer,
+              businessUrl: sBusiness,
+              description: sDesc
             })
           }
         }
@@ -1614,8 +1762,9 @@ async function showEcommerceMasterHub() {
   console.log(`║    Moser Commerce & Generatore Multi-Store · Aree Admin, Consumer, Business & Wizard    ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
 
-  const statusStorefront = health.storefront ? `${COLORS.green}ONLINE (:8080)${COLORS.reset}` : `${COLORS.red}OFFLINE (:8080)${COLORS.reset}`
-  const statusMedusa = health.medusa ? `${COLORS.green}ONLINE (:9000)${COLORS.reset}` : `${COLORS.red}OFFLINE (:9000)${COLORS.reset}`
+  const { storefrontPort, medusaPort } = health
+  const statusStorefront = health.storefront ? `${COLORS.green}ONLINE (:${storefrontPort})${COLORS.reset}` : `${COLORS.red}OFFLINE (:${storefrontPort})${COLORS.reset}`
+  const statusMedusa = health.medusa ? `${COLORS.green}ONLINE (:${medusaPort})${COLORS.reset}` : `${COLORS.red}OFFLINE (:${medusaPort})${COLORS.reset}`
   const statusStorage = health.storage ? `${COLORS.green}ONLINE (:8989)${COLORS.reset}` : `${COLORS.dim}STANDALONE LOCAL${COLORS.reset}`
 
   console.log(`  Stato Piattaforma: Storefront ${statusStorefront} | Medusa Backend ${statusMedusa} | Asset Storage ${statusStorage}\n`)
@@ -1649,17 +1798,17 @@ async function showEcommerceMasterHub() {
 
   console.log(`  ${COLORS.bright}✨ ARCHITETTURE & ASSET SUITE (PR #44, #45, #46):${COLORS.reset}`)
   console.log(`  [IL] ${COLORS.magenta}${COLORS.bright}🌟 Influencer Landings V1-V10${COLORS.reset}           (10 Concetti ad alta conversione, formule & mockup SVG)`)
-  console.log(`  [GS] ${COLORS.yellow}${COLORS.bright}👑 Golden Scrollytelling Standard 3D${COLORS.reset}    (Shoe Craftsman 01, 6 Capitoli, Three.js & AI Video)`)
+  console.log(`  [GS] ${COLORS.yellow}${COLORS.bright}👞 Don Gennaro Calzature 1952${COLORS.reset}        (Store Fullstack Next.js :3005 / PortManager)`)
   console.log(`  [CT] ${COLORS.cyan}${COLORS.bright}💬 Communication Templates V1 Suite${COLORS.reset}     (Chatbot AI, FAQ, Docs, Email, Offers, Presets)`)
   console.log(`  [LT] ${COLORS.green}${COLORS.bright}⚖️ Legal Templates & Compliance Suite${COLORS.reset}   (10 Contratti & Policy GDPR/EU/IT verificate)`)
   console.log(`  [OM] ${COLORS.blue}${COLORS.bright}🧩 Optional Modules & Bundles Manager${COLORS.reset}   (Communication Base, Legal Base, Foundation)`)
   console.log(`  [TR] ${COLORS.cyan}${COLORS.bright}🌍 Multi-Language & Auto-Translation${COLORS.reset}    (9 Lingue: IT, EN, FR, DE, ES, ZH, JA, RU, AR RTL)\n`)
 
-  console.log(`  ${COLORS.bright}⚙️ GESTIONE SERVER & RUNTIME:${COLORS.reset}`)
-  console.log(`  [1]  ${COLORS.green}🚀 Avvia Storefront React/Vite${COLORS.reset}         (npm run dev su porta 8080)`)
-  console.log(`  [2]  ${COLORS.green}⚙️ Avvia Medusa Headless Backend${COLORS.reset}       (npm run medusa:dev su porta 9000)`)
-  console.log(`  [3]  ${COLORS.green}${COLORS.bright}⚡ Avvia ENTRAMBI i Server${COLORS.reset}             (Dual Window Storefront + Medusa)`)
-  console.log(`  [4]  ${COLORS.red}🛑 Arresta Server E-Commerce${COLORS.reset}           (Libera porte 8080 e 9000)`)
+  console.log(`  ${COLORS.bright}⚙️ GESTIONE SERVER & RUNTIME (PORT MANAGER GOVERNED):${COLORS.reset}`)
+  console.log(`  [1]  ${COLORS.green}🚀 Avvia Storefront React/Vite${COLORS.reset}         (PortManager: porta ${storefrontPort})`)
+  console.log(`  [2]  ${COLORS.green}⚙️ Avvia Medusa Headless Backend${COLORS.reset}       (PortManager: porta ${medusaPort})`)
+  console.log(`  [3]  ${COLORS.green}${COLORS.bright}⚡ Avvia ENTRAMBI i Server${COLORS.reset}             (Dual Window Storefront :${storefrontPort} + Medusa :${medusaPort})`)
+  console.log(`  [4]  ${COLORS.red}🛑 Arresta Server E-Commerce${COLORS.reset}           (Libera porte ${storefrontPort} e ${medusaPort})`)
   console.log(`  [5]  ${COLORS.cyan}🛡️ Esegui Quality Suite & Contratti${COLORS.reset}    (npm run quality con tutti i contratti)`)
   console.log(`  [0]  ${COLORS.dim}Torna al Menu Principale${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
@@ -1673,8 +1822,8 @@ async function showEcommerceMasterHub() {
       case 'ADMIN':
       case 'A1': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/admin')
-        console.log(`${COLORS.green}  ✓ Aperta Area Amministrativa Moser: http://localhost:8080/admin${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/admin`)
+        console.log(`${COLORS.green}  ✓ Aperta Area Amministrativa Moser: http://localhost:${storefrontPort}/admin${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1684,8 +1833,8 @@ async function showEcommerceMasterHub() {
       case 'A2':
       case 'N': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/admin/new-ecommerce')
-        console.log(`${COLORS.green}  ✓ Aperto New E-Commerce Creation Wizard: http://localhost:8080/admin/new-ecommerce${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/admin/new-ecommerce`)
+        console.log(`${COLORS.green}  ✓ Aperto New E-Commerce Creation Wizard: http://localhost:${storefrontPort}/admin/new-ecommerce${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1694,8 +1843,8 @@ async function showEcommerceMasterHub() {
       case 'CREATIVE':
       case 'A3': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/admin/creative-studio')
-        console.log(`${COLORS.green}  ✓ Aperto Creative Studio 3D & Motion: http://localhost:8080/admin/creative-studio${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/admin/creative-studio`)
+        console.log(`${COLORS.green}  ✓ Aperto Creative Studio 3D & Motion: http://localhost:${storefrontPort}/admin/creative-studio${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1704,8 +1853,8 @@ async function showEcommerceMasterHub() {
       case 'RBAC':
       case 'A4': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/admin/access-control')
-        console.log(`${COLORS.green}  ✓ Aperto Access Control & RBAC Matrix: http://localhost:8080/admin/access-control${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/admin/access-control`)
+        console.log(`${COLORS.green}  ✓ Aperto Access Control & RBAC Matrix: http://localhost:${storefrontPort}/admin/access-control${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1714,8 +1863,8 @@ async function showEcommerceMasterHub() {
       case 'DISCOVERY':
       case 'A5': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/admin/discovery-lab-ops')
-        console.log(`${COLORS.green}  ✓ Aperto Discovery Lab Operations: http://localhost:8080/admin/discovery-lab-ops${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/admin/discovery-lab-ops`)
+        console.log(`${COLORS.green}  ✓ Aperto Discovery Lab Operations: http://localhost:${storefrontPort}/admin/discovery-lab-ops${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1724,8 +1873,8 @@ async function showEcommerceMasterHub() {
       case 'OPERATIONS':
       case 'A6': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/admin/operations')
-        console.log(`${COLORS.green}  ✓ Aperta Console Operazioni & Monitor: http://localhost:8080/admin/operations${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/admin/operations`)
+        console.log(`${COLORS.green}  ✓ Aperta Console Operazioni & Monitor: http://localhost:${storefrontPort}/admin/operations${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1736,8 +1885,8 @@ async function showEcommerceMasterHub() {
       case 'STOREFRONT':
       case 'C1': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/')
-        console.log(`${COLORS.green}  ✓ Aperta Area Consumer (Storefront Home): http://localhost:8080/${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/`)
+        console.log(`${COLORS.green}  ✓ Aperta Area Consumer (Storefront Home): http://localhost:${storefrontPort}/${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1746,8 +1895,8 @@ async function showEcommerceMasterHub() {
       case 'COLLECTIONS':
       case 'C2': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/collections')
-        console.log(`${COLORS.green}  ✓ Aperta Directory Collezioni & Prodotti: http://localhost:8080/collections${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/collections`)
+        console.log(`${COLORS.green}  ✓ Aperta Directory Collezioni & Prodotti: http://localhost:${storefrontPort}/collections${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1756,8 +1905,8 @@ async function showEcommerceMasterHub() {
       case 'ACCOUNT':
       case 'C3': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/account')
-        console.log(`${COLORS.green}  ✓ Aperta Area Account & Moser Circle VIP: http://localhost:8080/account${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/account`)
+        console.log(`${COLORS.green}  ✓ Aperta Area Account & Moser Circle VIP: http://localhost:${storefrontPort}/account${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1766,8 +1915,8 @@ async function showEcommerceMasterHub() {
       case 'SHOPPER':
       case 'C4': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/shop/personal-shopper')
-        console.log(`${COLORS.green}  ✓ Aperto Personal Shopper AI: http://localhost:8080/shop/personal-shopper${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/shop/personal-shopper`)
+        console.log(`${COLORS.green}  ✓ Aperto Personal Shopper AI: http://localhost:${storefrontPort}/shop/personal-shopper${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1776,8 +1925,8 @@ async function showEcommerceMasterHub() {
       case 'LOOKS':
       case 'C5': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/looks')
-        console.log(`${COLORS.green}  ✓ Aperto Lookbook Scrollytelling: http://localhost:8080/looks${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/looks`)
+        console.log(`${COLORS.green}  ✓ Aperto Lookbook Scrollytelling: http://localhost:${storefrontPort}/looks${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1786,8 +1935,8 @@ async function showEcommerceMasterHub() {
       case 'BUSINESS':
       case 'B1': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/company/control-center')
-        console.log(`${COLORS.green}  ✓ Aperto Company Control Center (Business): http://localhost:8080/company/control-center${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/company/control-center`)
+        console.log(`${COLORS.green}  ✓ Aperto Company Control Center (Business): http://localhost:${storefrontPort}/company/control-center${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1795,8 +1944,8 @@ async function showEcommerceMasterHub() {
       case 'BD':
       case 'B2': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/company/dashboard')
-        console.log(`${COLORS.green}  ✓ Aperta Company Dashboard: http://localhost:8080/company/dashboard${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/company/dashboard`)
+        console.log(`${COLORS.green}  ✓ Aperta Company Dashboard: http://localhost:${storefrontPort}/company/dashboard${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1805,8 +1954,8 @@ async function showEcommerceMasterHub() {
       case 'MERCHANT':
       case 'B3': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/merchant/dashboard')
-        console.log(`${COLORS.green}  ✓ Aperta Merchant Dashboard: http://localhost:8080/merchant/dashboard${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/merchant/dashboard`)
+        console.log(`${COLORS.green}  ✓ Aperta Merchant Dashboard: http://localhost:${storefrontPort}/merchant/dashboard${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1815,8 +1964,8 @@ async function showEcommerceMasterHub() {
       case 'PARTNER':
       case 'B4': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/partners/dashboard')
-        console.log(`${COLORS.green}  ✓ Aperto Partners Portal: http://localhost:8080/partners/dashboard${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/partners/dashboard`)
+        console.log(`${COLORS.green}  ✓ Aperto Partners Portal: http://localhost:${storefrontPort}/partners/dashboard${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1825,8 +1974,8 @@ async function showEcommerceMasterHub() {
       case 'SCOUT':
       case 'B5': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/scout/hub')
-        console.log(`${COLORS.green}  ✓ Aperto Scout Missions Hub: http://localhost:8080/scout/hub${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/scout/hub`)
+        console.log(`${COLORS.green}  ✓ Aperto Scout Missions Hub: http://localhost:${storefrontPort}/scout/hub${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1835,8 +1984,8 @@ async function showEcommerceMasterHub() {
       case 'TESTER':
       case 'B6': {
         await ensureStorefrontRunning()
-        openBrowserUrl('http://localhost:8080/tester/hub')
-        console.log(`${COLORS.green}  ✓ Aperto Tester Sample Validation Hub: http://localhost:8080/tester/hub${COLORS.reset}`)
+        openBrowserUrl(`http://localhost:${storefrontPort}/tester/hub`)
+        console.log(`${COLORS.green}  ✓ Aperto Tester Sample Validation Hub: http://localhost:${storefrontPort}/tester/hub${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1848,32 +1997,47 @@ async function showEcommerceMasterHub() {
         break
       }
       case '1': {
-        console.log(`${COLORS.green}Avvio Storefront React Vite in finestra indipendente...${COLORS.reset}`)
-        execSync(`start "Moser Storefront (Port 8080)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        console.log(`${COLORS.green}Avvio Storefront React Vite con PortManager (porta ${storefrontPort})...${COLORS.reset}`)
+        const launchScript = path.join(MOSER_PROJECT, 'scripts', 'launch-with-port-manager.cjs')
+        if (fs.existsSync(launchScript)) {
+          execSync(`start "Moser Storefront (Port ${storefrontPort})" node "${launchScript}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        } else {
+          execSync(`start "Moser Storefront (Port ${storefrontPort})" cmd.exe /k "cd /d \"${MOSER_PROJECT}\" && npm run dev -- --port ${storefrontPort}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        }
         await waitForEnter()
         showEcommerceMasterHub()
         break
       }
       case '2': {
-        console.log(`${COLORS.green}Avvio Medusa Headless Backend in finestra indipendente...${COLORS.reset}`)
-        execSync(`start "Moser Medusa Backend (Port 9000)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run medusa:dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        console.log(`${COLORS.green}Avvio Medusa Headless Backend con PortManager (porta ${medusaPort})...${COLORS.reset}`)
+        const launchScript = path.join(MOSER_PROJECT, 'scripts', 'launch-with-port-manager.cjs')
+        if (fs.existsSync(launchScript)) {
+          execSync(`start "Moser Medusa Backend (Port ${medusaPort})" node "${launchScript}" --medusa`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        } else {
+          execSync(`start "Moser Medusa Backend (Port ${medusaPort})" cmd.exe /k "cd /d \"${MOSER_PROJECT}\" && npm run medusa:dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        }
         await waitForEnter()
         showEcommerceMasterHub()
         break
       }
       case '3': {
-        console.log(`${COLORS.green}Avvio ENTRAMBI i server (Storefront :8080 + Medusa :9000)...${COLORS.reset}`)
-        execSync(`start "Moser Storefront (Port 8080)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
-        execSync(`start "Moser Medusa Backend (Port 9000)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run medusa:dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
-        console.log(`${COLORS.green}  ✓ Finestre avviate. Storefront in ascolto su :8080, Medusa su :9000.${COLORS.reset}`)
+        console.log(`${COLORS.green}Avvio ENTRAMBI i server con PortManager (Storefront :${storefrontPort} + Medusa :${medusaPort})...${COLORS.reset}`)
+        const launchScript = path.join(MOSER_PROJECT, 'scripts', 'launch-with-port-manager.cjs')
+        if (fs.existsSync(launchScript)) {
+          execSync(`start "Moser Dual Servers" node "${launchScript}" --all`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        } else {
+          execSync(`start "Moser Storefront (Port ${storefrontPort})" cmd.exe /k "cd /d \"${MOSER_PROJECT}\" && npm run dev -- --port ${storefrontPort}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+          execSync(`start "Moser Medusa Backend (Port ${medusaPort})" cmd.exe /k "cd /d \"${MOSER_PROJECT}\" && npm run medusa:dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+        }
+        console.log(`${COLORS.green}  ✓ Processi avviati via PortManager. Storefront :${storefrontPort}, Medusa :${medusaPort}.${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
       }
       case '4': {
-        console.log(`${COLORS.red}Arresto server E-Commerce su porte 8080 e 9000...${COLORS.reset}`)
-        const killed = killPorts([8080, 9000])
-        console.log(`${COLORS.green}  ✓ Processi arrestati (${killed.length} terminati). Porte 8080 e 9000 libere.${COLORS.reset}`)
+        console.log(`${COLORS.red}Arresto server E-Commerce su porte ${storefrontPort} e ${medusaPort}...${COLORS.reset}`)
+        const killed = killPorts([storefrontPort, medusaPort])
+        console.log(`${COLORS.green}  ✓ Processi arrestati (${killed.length} terminati). Porte ${storefrontPort} e ${medusaPort} libere.${COLORS.reset}`)
         await waitForEnter()
         showEcommerceMasterHub()
         break
@@ -1897,7 +2061,9 @@ async function showEcommerceMasterHub() {
       }
       case 'GS':
       case 'SCROLLYTELLING':
-      case 'GOLDEN': {
+      case 'GOLDEN':
+      case 'SCARPE':
+      case 'ARTIGIANO': {
         await showGoldenScrollytellingHub()
         break
       }
@@ -1938,7 +2104,7 @@ async function showEcommerceMasterHub() {
 
 async function showMultiStoreExplorer() {
   clearScreen()
-  const stores = getEcommerceStoresList()
+  const stores = await getEcommerceStoresList()
 
   console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
   console.log(`║ 🌐 MULTI-STORE EXPLORER & GESTIONE TUTTI GLI E-COMMERCE CREATI                         ║`)
@@ -1981,13 +2147,14 @@ async function showMultiStoreExplorer() {
             businessUrl: `${target.replace(/\/+$/, '')}/company/dashboard`,
           }
         } else {
+          const { storefrontPort } = await getEcommercePorts()
           selectedStore = {
             id: target,
             name: `Store ${target}`,
             type: 'Derived Store',
-            adminUrl: `http://localhost:8080/admin/new-ecommerce?project=${encodeURIComponent(target)}`,
-            consumerUrl: `http://localhost:8080?project=${encodeURIComponent(target)}`,
-            businessUrl: `http://localhost:8080/company/dashboard?project=${encodeURIComponent(target)}`,
+            adminUrl: `http://localhost:${storefrontPort}/admin/new-ecommerce?project=${encodeURIComponent(target)}`,
+            consumerUrl: `http://localhost:${storefrontPort}?project=${encodeURIComponent(target)}`,
+            businessUrl: `http://localhost:${storefrontPort}/company/dashboard?project=${encodeURIComponent(target)}`,
           }
         }
         await promptStoreActions(selectedStore)
@@ -2029,7 +2196,11 @@ async function promptStoreActions(store) {
   rl.question(`  ${COLORS.bright}Seleziona realm per ${store.id} (A, C, B, W, 0): ${COLORS.reset}`, async (choice) => {
     rl.close()
     const c = (choice || '').trim().toUpperCase()
-    await ensureStorefrontRunning()
+    if (store.id === 'don-gennaro-calzature-napoli' || store.port === DON_GENNARO_PORT) {
+      await ensureDonGennaroRunning()
+    } else {
+      await ensureStorefrontRunning()
+    }
     switch (c) {
       case 'A':
       case 'ADMIN': {
@@ -2196,99 +2367,47 @@ async function showInfluencerLandingsHub() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. GOLDEN SCROLLYTELLING STANDARD & 3D TURNTABLE (PR #45)
+// 2. DON GENNARO ESPOSITO · CALZATURE NAPOLETANE DAL 1952 (FULLSTACK STORE)
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function showGoldenScrollytellingHub() {
   clearScreen()
-  const manifestPath = path.join(SCROLLYTELLING_DIR, 'manifest.json')
-  let chapters = []
-  let templateId = 'Golden-Shoe-craftman01'
-  if (fs.existsSync(manifestPath)) {
-    try {
-      const data = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
-      chapters = data.chapters || []
-      templateId = data.templateId || templateId
-    } catch (_) {}
-  }
+  const portInfo = await resolveDonGennaroPort()
+  const serverStatus = portInfo.isOnline
+    ? `${COLORS.green}ONLINE (:${portInfo.port})${COLORS.reset}`
+    : `${COLORS.yellow}STANDBY / AUTO-START (:${portInfo.port})${COLORS.reset}`
+
+  const portStatusDesc = portInfo.hasConflict
+    ? `${COLORS.yellow}Porta ${portInfo.port} (PortManager: Conflitto risolto su 3005, riallocato su porta libera)${COLORS.reset}`
+    : `${COLORS.green}Porta ${portInfo.port} (PortManager: Assegnata / Nessun conflitto)${COLORS.reset}`
 
   console.log(`${COLORS.yellow}${COLORS.bright}╔════════════════════════════════════════════════════════════════════════════════════════╗`)
-  console.log(`║ 👑 GOLDEN SCROLLYTELLING STANDARD & 3D TURNTABLE (PR #45)                              ║`)
-  console.log(`║    Template: ${templateId.padEnd(50)} [Standard Normativo] ║`)
+  console.log(`║ 👞 DON GENNARO ESPOSITO · CALZATURE NAPOLETANE DAL 1952                                ║`)
+  console.log(`║    Fullstack Store Launcher · Next.js 15 · Hermes PortManager                           ║`)
   console.log(`╚════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
 
-  console.log(`  ${COLORS.dim}Stack Tecnologico:${COLORS.reset} Three.js WebGL Canvas | GSAP ScrollTrigger | Lenis Smooth Scroll | WebAudio Binaural ASMR\n`)
+  console.log(`  ${COLORS.dim}Stato Server:${COLORS.reset}    ${serverStatus}`)
+  console.log(`  ${COLORS.dim}Porta Runtime:${COLORS.reset}   ${portStatusDesc}`)
+  console.log(`  ${COLORS.dim}Directory:${COLORS.reset}       mechaHD/don-gennaro-calzature-napoli`)
+  console.log(`  ${COLORS.dim}Stack:${COLORS.reset}           Next.js 15 | Three.js 3D Turntable | GSAP | WebAudio ASMR\n`)
 
-  console.log(`  ${COLORS.bright}CAPITOLI SCENOGRAFICI (${chapters.length} FASI NARRATIVE):${COLORS.reset}`)
-  chapters.forEach((ch) => {
-    const num = `[${ch.index}]`.padEnd(5)
-    const ref = ch.reference ? path.join(SCROLLYTELLING_DIR, ch.reference) : null
-    const exists = ref && fs.existsSync(ref)
-    const status = exists ? `${COLORS.green}✓ SVG DISPONIBILE${COLORS.reset}` : `${COLORS.yellow}⚡ MODELLO 3D PROCEDURALE${COLORS.reset}`
-    console.log(`  ${num} ${COLORS.cyan}${COLORS.bright}${ch.label.padEnd(20)}${COLORS.reset} ${status} - ${COLORS.dim}ID: ${ch.id}${COLORS.reset}`)
-    if (ch.interaction) console.log(`        ${COLORS.yellow}Interazione:${COLORS.reset} ${ch.interaction}`)
-    if (ch.mediaMode) console.log(`        ${COLORS.dim}Media Modes:${COLORS.reset} ${ch.mediaMode.join(', ')}`)
-  })
-
-  console.log(`\n  ${COLORS.bright}DOCUMENTI NORMATIVI & ASSET STUDIO:${COLORS.reset}`)
-  console.log(`  [1-6] ${COLORS.yellow}Visualizza Mockup Grafico Capitolo (1..6)${COLORS.reset}`)
-  console.log(`  [B]   ${COLORS.cyan}Implementation Blueprint (Three.js, Canvas, GSAP, WebAudio)${COLORS.reset}`)
-  console.log(`  [V]   ${COLORS.magenta}AI Video Generation Prompt Bible (Runway Gen-3, Luma, Sora, Midjourney)${COLORS.reset}`)
-  console.log(`  [Q]   ${COLORS.green}QA Acceptance Gate (60fps benchmark, Audio sync, WebGL fallback)${COLORS.reset}`)
-  console.log(`  [G]   ${COLORS.yellow}Golden Standard Manifesto (Regole auree per futuri progetti)${COLORS.reset}`)
-  console.log(`  [L]   ${COLORS.cyan}Apri Scrollytelling Lookbook nello Storefront (:8080/looks)${COLORS.reset}`)
+  console.log(`  ${COLORS.bright}AZIONI:${COLORS.reset}`)
+  console.log(`  [1]   ${COLORS.yellow}${COLORS.bright}👑 Avvia & Apri Store Don Gennaro Fullstack (Porta ${portInfo.port})${COLORS.reset}`)
   console.log(`  [0]   ${COLORS.dim}Torna all'E-Commerce Master Hub${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  rl.question(`  ${COLORS.bright}Seleziona opzione Scrollytelling (1-6, B, V, Q, G, L, 0): ${COLORS.reset}`, async (choice) => {
+  rl.question(`  ${COLORS.bright}Seleziona opzione Don Gennaro (1 per avviare, 0 per uscire): ${COLORS.reset}`, async (choice) => {
     rl.close()
     const input = (choice || '').trim().toUpperCase()
-    if (input === '0' || input === '') {
+    if (input === '0') {
       return showEcommerceMasterHub()
     }
-    if (input === 'B') {
-      renderMarkdownFilePreview(path.join(SCROLLYTELLING_DIR, 'IMPLEMENTATION_BLUEPRINT.md'), 50)
-      await waitForEnter()
-      return showGoldenScrollytellingHub()
-    }
-    if (input === 'V') {
-      renderMarkdownFilePreview(path.join(SCROLLYTELLING_DIR, 'VIDEO_GENERATION.md'), 50)
-      await waitForEnter()
-      return showGoldenScrollytellingHub()
-    }
-    if (input === 'Q') {
-      renderMarkdownFilePreview(path.join(SCROLLYTELLING_DIR, 'QA_ACCEPTANCE.md'), 50)
-      await waitForEnter()
-      return showGoldenScrollytellingHub()
-    }
-    if (input === 'G') {
-      const gsPath = path.join(MOSER_PROJECT, 'docs', 'scrollytelling', 'GOLDEN_STANDARD.md')
-      renderMarkdownFilePreview(gsPath, 50)
-      await waitForEnter()
-      return showGoldenScrollytellingHub()
-    }
-    if (input === 'L') {
-      await ensureStorefrontRunning()
-      openBrowserUrl('http://localhost:8080/looks')
-      console.log(`${COLORS.green}  ✓ Aperto Lookbook Scrollytelling: http://localhost:8080/looks${COLORS.reset}`)
-      await waitForEnter()
-      return showGoldenScrollytellingHub()
-    }
-    const idx = Number.parseInt(input, 10)
-    if (idx >= 1 && idx <= chapters.length) {
-      const ch = chapters[idx - 1]
-      if (ch.reference) {
-        const svgPath = path.join(SCROLLYTELLING_DIR, ch.reference)
-        if (fs.existsSync(svgPath)) {
-          openBrowserUrl(svgPath)
-          console.log(`${COLORS.green}  ✓ Aperto Capitolo ${ch.index} (${ch.label}): ${svgPath}${COLORS.reset}`)
-        } else {
-          console.log(`${COLORS.red}  File non trovato: ${svgPath}${COLORS.reset}`)
-        }
-      } else {
-        console.log(`${COLORS.yellow}  Capitolo ${ch.index} (${ch.label}): Rendering 3D procedurale Three.js (nessun file SVG statico).${COLORS.reset}`)
-      }
+    if (input === '1' || input === 'S' || input === '') {
+      const activePort = await ensureDonGennaroRunning()
+      const targetUrl = `http://localhost:${activePort}`
+      openBrowserUrl(targetUrl)
+      console.log(`${COLORS.green}  ✓ Aperto Store Don Gennaro Calzature: ${targetUrl}${COLORS.reset}`)
       await waitForEnter()
       return showGoldenScrollytellingHub()
     }
@@ -2769,49 +2888,49 @@ async function showMultiTerminalLauncher() {
     switch (c) {
       case '1': {
         console.log(`${COLORS.green}Avvio nuova finestra terminale per Job Live 10h Monitor...${COLORS.reset}`)
-        execSync(`start "Hermes - 10h Swarm Monitor" powershell -NoExit -Command "node '${cliScript}' -j"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        execSync(`start "Hermes - 10h Swarm Monitor" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && node \"${cliScript}\" -j"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
       }
       case '2': {
         console.log(`${COLORS.green}Avvio nuova finestra per lo stato Kimi First-Layer / Hydra...${COLORS.reset}`)
-        execSync(`start "Hermes - Kimi First-Layer Hydra" powershell -NoExit -Command "node '${cliScript}' -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        execSync(`start "Hermes - Kimi First-Layer Hydra" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && node \"${cliScript}\" -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
       }
       case '3': {
         console.log(`${COLORS.green}Avvio nuova finestra terminale per Direct Swarm Chat...${COLORS.reset}`)
-        execSync(`start "Hermes - Swarm Chat REPL" powershell -NoExit -Command "node '${cliScript}' -c"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        execSync(`start "Hermes - Swarm Chat REPL" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && node \"${cliScript}\" -c"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
       }
       case '4': {
         console.log(`${COLORS.green}Avvio nuova finestra terminale per OpenChatCut Video Editor...${COLORS.reset}`)
-        execSync(`start "Hermes - OpenChatCut" powershell -NoExit -Command "node '${cliScript}' -v"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        execSync(`start "Hermes - OpenChatCut" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && node \"${cliScript}\" -v"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
       }
       case '5': {
         console.log(`${COLORS.green}Avvio nuova finestra terminale per Pi Coding Agent via Kimi/Hydra...${COLORS.reset}`)
-        execSync(`start "Pi Coding Agent - Kimi Hydra" powershell -NoExit -Command "& '${piKimiBat}'"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        execSync(`start "Pi Coding Agent - Kimi Hydra" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && call \"${piKimiBat}\""`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
       }
       case '6': {
         console.log(`${COLORS.green}Avvio nuova finestra terminale per Analytics Dashboard...${COLORS.reset}`)
-        execSync(`start "Hermes - Analytics Dashboard" powershell -NoExit -Command "node '${cliScript}' -a"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        execSync(`start "Hermes - Analytics Dashboard" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && node \"${cliScript}\" -a"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
       }
       case '7': {
         console.log(`${COLORS.green}Avvio nuova finestra terminale per Multiplexer...${COLORS.reset}`)
-        execSync(`start "Hermes - Multiplexer" powershell -NoExit -Command "node '${cliScript}' -m"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+        execSync(`start "Hermes - Multiplexer" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && node \"${cliScript}\" -m"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
@@ -2819,7 +2938,7 @@ async function showMultiTerminalLauncher() {
       case '8': {
         if (windowsTerminalAvailable) {
           console.log(`${COLORS.cyan}Avvio Windows Terminal Multi-Pane Matrix...${COLORS.reset}`)
-          const wtCmd = `wt -w 0 new-tab --title "LDG Innovation Hub" -d "${B2B_PROJECT}" powershell -NoExit -Command "node '${cliScript}' --ldg" ; split-pane -V --title "Pi Agent (Kimi Hydra)" -d "${PI_DIR}" powershell -NoExit -Command "& '${piKimiBat}'" ; split-pane -H --title "Kimi First-Layer Hydra" -d "${KIMI_DIR}" powershell -NoExit -Command "node '${cliScript}' -7"`
+          const wtCmd = `wt -w 0 new-tab --title "LDG Innovation Hub" -d "${B2B_PROJECT}" cmd.exe /k "node \"${cliScript}\" --ldg" ; split-pane -V --title "Pi Agent (Kimi Hydra)" -d "${PI_DIR}" cmd.exe /k "call \"${piKimiBat}\"" ; split-pane -H --title "Kimi First-Layer Hydra" -d "${KIMI_DIR}" cmd.exe /k "node \"${cliScript}\" -7"`
           try {
             execSync(wtCmd, { shell: 'cmd.exe' })
             console.log(`${COLORS.green}Windows Terminal Matrix avviato.${COLORS.reset}`)
@@ -2827,10 +2946,10 @@ async function showMultiTerminalLauncher() {
             console.error(`${COLORS.red}Windows Terminal rilevato ma avvio fallito: ${error.message}${COLORS.reset}`)
           }
         } else {
-          console.log(`${COLORS.yellow}Windows Terminal assente: avvio esplicito di tre finestre PowerShell.${COLORS.reset}`)
-          execSync(`start "LDG Innovation Hub" powershell -NoExit -Command "node '${cliScript}' --ldg"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
-          execSync(`start "Pi Agent (Kimi Hydra)" powershell -NoExit -Command "& '${piKimiBat}'"`, { cwd: PI_DIR, shell: 'cmd.exe' })
-          execSync(`start "Hermes - Kimi First-Layer Hydra" powershell -NoExit -Command "node '${cliScript}' -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
+          console.log(`${COLORS.yellow}Windows Terminal assente: avvio esplicito di tre finestre dedicate.${COLORS.reset}`)
+          execSync(`start "LDG Innovation Hub" cmd.exe /k "cd /d \"${B2B_PROJECT}\" && node \"${cliScript}\" --ldg"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+          execSync(`start "Pi Agent (Kimi Hydra)" cmd.exe /k "cd /d \"${PI_DIR}\" && call \"${piKimiBat}\""`, { cwd: PI_DIR, shell: 'cmd.exe' })
+          execSync(`start "Hermes - Kimi First-Layer Hydra" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && node \"${cliScript}\" -7"`, { cwd: HERMES_ROOT, shell: 'cmd.exe' })
         }
         await waitForEnter()
         showMenu()
@@ -2838,7 +2957,7 @@ async function showMultiTerminalLauncher() {
       }
       case '9': {
         console.log(`${COLORS.green}Avvio nuova finestra terminale per LDG Innovation Hub...${COLORS.reset}`)
-        execSync(`start "LDG Innovation Hub" powershell -NoExit -Command "node '${cliScript}' --ldg"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+        execSync(`start "LDG Innovation Hub" cmd.exe /k "cd /d \"${B2B_PROJECT}\" && node \"${cliScript}\" --ldg"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
         await waitForEnter()
         showMenu()
         break
@@ -3089,8 +3208,11 @@ async function showMenu() {
   console.log(`  ${COLORS.bright}╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
   console.log(`  [1]  ${COLORS.yellow}${COLORS.bright}🚀 Founder OS Suite & Executive Hub${COLORS.reset}      (Cockpit Startup: Frontend :5173, Backend :3001, DB)`)
   console.log(`  [E]  ${COLORS.yellow}${COLORS.bright}🛍️  E-Commerce Master Control Hub${COLORS.reset}        (Moser & Multi-Store: Admin, Consumer, Business, Wizard)`)
+  console.log(`  [EV] ${COLORS.green}${COLORS.bright}🚀 Avvia Storefront React Vite${COLORS.reset}           (Moser Luxury Commerce - PortManager Governed)`)
   console.log(`  [I]  ${COLORS.green}${COLORS.bright}🏢 LDG Innovation Master Hub${COLORS.reset}             (Next.js 15 App :3000, B2B Suite, Requisiti & Pi Agent)`)
-  console.log(`  [S]  ${COLORS.magenta}${COLORS.bright}🎬 AI Influencer Studios Dashboard${COLORS.reset}       (Orazio :8765, Giuly :8766, Science :8767, Finance :8768)`)
+  console.log(`  [S]  ${COLORS.magenta}${COLORS.bright}🎬 AI Influencer Studios Dashboard${COLORS.reset}       (Orazio :8765, Giuly :8766, Science :8767, Finance :8768, Aword :8769)`)
+  console.log(`  [AW] ${COLORS.blue}${COLORS.bright}🗣️  Aword Language Content Matrix${COLORS.reset}        (Dashboard 260 Video & Caroselli, Survey & All-in-One :8769)`)
+  console.log(`  [PS] ${COLORS.magenta}${COLORS.bright}⚡ Multi-Project Studio & Generator${COLORS.reset}     (Master Dashboard & Generatore Automatico Idee :8765/project-studio)`)
   console.log(`  [U]  ${COLORS.red}${COLORS.bright}🌅 Morning Report, Gaps & Decisioni${COLORS.reset}        (Difformità, incongruenze & decisioni executive)\n`)
 
   console.log(`  ${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗${COLORS.reset}`)
@@ -3119,7 +3241,7 @@ async function showMenu() {
   console.log(`  ${COLORS.bright}╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}`)
   console.log(`  [V]  ${COLORS.magenta}${COLORS.bright}🎬 OpenChatCut Video Editor Tool${COLORS.reset}         (Multitrack AI video cutting, Remotion & MCP)`)
   console.log(`  [IL] ${COLORS.magenta}🌟 Influencer Landings Hub (V1-V10)${COLORS.reset}        (10 Concetti ad alta conversione & mockup SVG)`)
-  console.log(`  [GS] ${COLORS.yellow}👑 Golden Scrollytelling Standard 3D${COLORS.reset}       (Shoe Craftsman 01, Three.js WebGL & AI Video)`)
+  console.log(`  [GS] ${COLORS.yellow}👑 Don Gennaro Scrollytelling 3D${COLORS.reset}          (Calzature Napoletane: Next.js :3005, Three.js & 360°)`)
   console.log(`  [CT] ${COLORS.cyan}💬 Communication Templates V1 Suite${COLORS.reset}        (Chatbot AI, FAQ, Docs, Email, Offers, Presets)`)
   console.log(`  [LT] ${COLORS.green}⚖️ Legal Templates & Compliance Suite${COLORS.reset}      (10 Contratti & Policy GDPR/EU/IT verificate)`)
   console.log(`  [OM] ${COLORS.blue}🧩 Optional Modules & Bundles Manager${COLORS.reset}      (Communication Base, Legal Base, Foundation)`)
@@ -3280,6 +3402,22 @@ async function handleChoice(choice) {
       await showEcommerceMasterHub()
       break
     }
+    case 'EV':
+    case 'MOSER_DEV':
+    case 'MOSER_STOREFRONT':
+    case 'STOREFRONT': {
+      const { storefrontPort } = await getEcommercePorts()
+      console.log(`${COLORS.green}Avvio Storefront React Vite con PortManager (porta ${storefrontPort})...${COLORS.reset}`)
+      const launchScript = path.join(MOSER_PROJECT, 'scripts', 'launch-with-port-manager.cjs')
+      if (fs.existsSync(launchScript)) {
+        execSync(`start "Moser Storefront (Port ${storefrontPort})" node "${launchScript}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+      } else {
+        execSync(`start "Moser Storefront (Port ${storefrontPort})" cmd.exe /k "cd /d \"${MOSER_PROJECT}\" && npm run dev -- --port ${storefrontPort}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+      }
+      await waitForEnter()
+      showMenu()
+      break
+    }
     case 'IL':
     case 'INFLUENCER':
     case 'INFLUENCER_LANDINGS': {
@@ -3288,7 +3426,9 @@ async function handleChoice(choice) {
     }
     case 'GS':
     case 'SCROLLYTELLING':
-    case 'GOLDEN': {
+    case 'GOLDEN':
+    case 'SCARPE':
+    case 'ARTIGIANO': {
       await showGoldenScrollytellingHub()
       break
     }
@@ -3365,21 +3505,60 @@ async function handleChoice(choice) {
       await showAIInfluencerStudios()
       break
     }
+    case 'AW':
+    case 'AWORD':
+    case 'AWORD-DASHBOARD':
+    case 'LINGUA': {
+      await launchAwordDashboard()
+      break
+    }
+    case 'PS':
+    case 'PROJECTS':
+    case 'STUDIO':
+    case 'PROJECT-STUDIO':
+    case 'GENERATOR': {
+      await launchProjectStudioDashboard()
+      break
+    }
     case '2': {
-      console.log(`${COLORS.magenta}Avvio Pi Coding Agent con provider configurato...${COLORS.reset}`)
       const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
-      if (fs.existsSync(piKimi)) {
-        if (!hasKimiCheckpoint()) console.log(`${COLORS.yellow}Checkpoint Kimi locale non rilevato: il runner non verrà presentato come C-engine locale.${COLORS.reset}`)
-        try {
-          execSync(`call "${piKimi}"`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
-        } catch (e) {
-          console.error(`${COLORS.red}Error launching Pi Kimi: ${e.message}${COLORS.reset}`)
-        }
-      } else {
-        console.log(`${COLORS.yellow}Pi Kimi batch runner not found in ${piKimi}.${COLORS.reset}`)
+      if (!fs.existsSync(piKimi)) {
+        console.log(`${COLORS.yellow}Pi Kimi batch runner non trovato in ${piKimi}.${COLORS.reset}`)
+        await waitForEnter()
+        showMenu()
+        break
       }
-      await waitForEnter()
-      showMenu()
+      if (!hasKimiCheckpoint()) console.log(`${COLORS.yellow}Checkpoint Kimi locale non rilevato: il runner userà il bridge Kimi K3 / Hydra.${COLORS.reset}`)
+
+      const rlLaunch = readline.createInterface({ input: process.stdin, output: process.stdout })
+      rlLaunch.question(`\n  ${COLORS.cyan}Modalità di avvio Pi Coding Agent:${COLORS.reset}\n  ${COLORS.white}[1]${COLORS.reset} Finestra Dedicata Separata (${COLORS.green}Consigliato su Windows - evita conflitti con TUIOS${COLORS.reset})\n  ${COLORS.white}[2]${COLORS.reset} In-place (Nella stessa finestra terminale)\n  ${COLORS.dim}Scelta [1/2, default 1]: ${COLORS.reset}`, async (ans) => {
+        rlLaunch.close()
+        const choice = (ans || '1').trim()
+        if (choice === '2') {
+          console.log(`${COLORS.magenta}Avvio Pi Coding Agent in-place...${COLORS.reset}`)
+          try {
+            process.stdin.pause()
+            if (process.stdin.setRawMode) process.stdin.setRawMode(false)
+            spawnSync('cmd.exe', ['/c', `call "${piKimi}"`], {
+              stdio: 'inherit',
+              cwd: HERMES_ROOT,
+              windowsHide: false
+            })
+            process.stdin.resume()
+          } catch (e) {
+            console.error(`${COLORS.red}Errore durante l'avvio di Pi: ${e.message}${COLORS.reset}`)
+          }
+        } else {
+          console.log(`${COLORS.green}Apertura Pi Coding Agent in una nuova finestra dedicata...${COLORS.reset}`)
+          try {
+            execSync(`start "Pi Coding Agent - Kimi K3" cmd.exe /k "cd /d \"${HERMES_ROOT}\" && call \"${piKimi}\""`, { shell: 'cmd.exe' })
+          } catch (e) {
+            console.error(`${COLORS.red}Errore apertura finestra Pi: ${e.message}${COLORS.reset}`)
+          }
+        }
+        await waitForEnter()
+        showMenu()
+      })
       break
     }
     case '3': {
@@ -3494,10 +3673,11 @@ async function handleChoice(choice) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STUDIOS = [
-  { key: '1', name: 'Orazio Dallo Spazio',   handle: '@orazio.dallospazio', port: 8765, color: COLORS.cyan },
-  { key: '2', name: 'Giuly Moser',            handle: '@giulia.moser',       port: 8766, color: COLORS.magenta },
-  { key: '3', name: 'Faceless Science',        handle: '@faceless.science',   port: 8767, color: COLORS.green },
-  { key: '4', name: 'Faceless Finance',        handle: '@faceless.finance',   port: 8768, color: COLORS.yellow },
+  { key: '1', name: 'Orazio Dallo Spazio',   handle: '@orazio.dallospazio', port: 8765, color: COLORS.cyan, path: '' },
+  { key: '2', name: 'Giuly Moser',            handle: '@giulia.moser',       port: 8766, color: COLORS.magenta, path: '' },
+  { key: '3', name: 'Faceless Science',        handle: '@faceless.science',   port: 8767, color: COLORS.green, path: '' },
+  { key: '4', name: 'Faceless Finance',        handle: '@faceless.finance',   port: 8768, color: COLORS.yellow, path: '' },
+  { key: '5', name: 'Aword Language AI',       handle: '@aword.languages',    port: 8769, color: COLORS.blue, path: '/aword-dashboard' },
 ]
 
 async function getStudioHealth(port) {
@@ -3526,6 +3706,7 @@ async function startStudiosServer(targetPort = 8765) {
   if (!PYTHON_EXE) {
     return { ok: false, message: 'Nessun runtime Python funzionante trovato.' }
   }
+  killPorts([8765, 8766, 8767, 8768, 8769])
   fs.mkdirSync(STUDIOS_LOG_DIR, { recursive: true })
   fs.appendFileSync(STUDIOS_LOG_PATH, `\n[${new Date().toISOString()}] Avvio AI Studios con ${PYTHON_EXE}\n`, 'utf8')
   try {
@@ -3551,8 +3732,9 @@ async function ensureStudioOnline(port) {
   return { ...result, started: result.ok }
 }
 
-function openStudioBrowser(port) {
-  execSync(`start "" "http://localhost:${port}"`, { shell: 'cmd.exe', stdio: 'ignore', windowsHide: true })
+function openStudioBrowser(port, subpath = '') {
+  const targetUrl = subpath ? `http://localhost:${port}${subpath}` : `http://localhost:${port}`
+  execSync(`start "" "${targetUrl}"`, { shell: 'cmd.exe', stdio: 'ignore', windowsHide: true })
 }
 
 async function showAIInfluencerStudios() {
@@ -3563,26 +3745,26 @@ async function showAIInfluencerStudios() {
   console.log()
   console.log(`  ${COLORS.bright}CANALI ATTIVI:${COLORS.reset}`)
   STUDIOS.forEach(s => {
-    const url = `http://localhost:${s.port}`
+    const url = `http://localhost:${s.port}${s.path || ''}`
     console.log(`  [${s.key}]  ${s.color}${COLORS.bright}${s.name.padEnd(24)}${COLORS.reset} ${s.handle.padEnd(24)} ${COLORS.dim}→${COLORS.reset} ${COLORS.cyan}${url}${COLORS.reset}`)
   })
-  console.log(`  [A]  ${COLORS.green}Apri TUTTI i 4 canali nel browser${COLORS.reset}`)
-  console.log(`  [P]  ${COLORS.yellow}Avvia Server Multi-Port (porta 8765-8768)${COLORS.reset}`)
-  console.log(`  [K]  ${COLORS.red}Arresta Server Multi-Port (libera porte 8765-8768)${COLORS.reset}`)
+  console.log(`  [A]  ${COLORS.green}Apri TUTTI i 5 canali nel browser${COLORS.reset}`)
+  console.log(`  [P]  ${COLORS.yellow}Avvia Server Multi-Port (porta 8765-8769)${COLORS.reset}`)
+  console.log(`  [K]  ${COLORS.red}Arresta Server Multi-Port (libera porte 8765-8769)${COLORS.reset}`)
   console.log(`  [Q]  ${COLORS.dim}Torna al menu principale${COLORS.reset}`)
   console.log()
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  rl.question(`  ${COLORS.bright}Seleziona canale (1-4, A, P, K, Q): ${COLORS.reset}`, async (choice) => {
+  rl.question(`  ${COLORS.bright}Seleziona canale (1-5, A, P, K, Q): ${COLORS.reset}`, async (choice) => {
     rl.close()
     const c = choice.trim().toUpperCase()
     if (c === 'Q' || c === '') {
       return showMenu()
     }
     if (c === 'K' || c === 'KILL' || c === 'STOP') {
-      console.log(`${COLORS.red}\n  Arresto del Server AI Studios e liberazione porte 8765-8768 in corso...${COLORS.reset}`)
-      const killed = killPorts([8765, 8766, 8767, 8768])
+      console.log(`${COLORS.red}\n  Arresto del Server AI Studios e liberazione porte 8765-8769 in corso...${COLORS.reset}`)
+      const killed = killPorts([8765, 8766, 8767, 8768, 8769])
       console.log(`${COLORS.green}  ✓ Porte AI Studios arrestate (${killed.length} processi terminati).${COLORS.reset}`)
       await waitForEnter()
       return showAIInfluencerStudios()
@@ -3599,7 +3781,7 @@ async function showAIInfluencerStudios() {
       const healthResults = await Promise.all(STUDIOS.map(async studio => ({ studio, health: await getStudioHealth(studio.port) })))
       const online = healthResults.filter(item => item.health)
       for (const { studio } of online) {
-        try { openStudioBrowser(studio.port) } catch (_) {}
+        try { openStudioBrowser(studio.port, studio.path || '') } catch (_) {}
       }
       console.log(`${online.length === STUDIOS.length ? COLORS.green : COLORS.yellow}\n  ${online.length === STUDIOS.length ? '✓' : '⚠'} Aperti ${online.length}/${STUDIOS.length} canali online.${COLORS.reset}`)
       await waitForEnter()
@@ -3611,7 +3793,7 @@ async function showAIInfluencerStudios() {
       if (result.ok) {
         const allHealth = await Promise.all(STUDIOS.map(studio => getStudioHealth(studio.port)))
         const onlineCount = allHealth.filter(Boolean).length
-        console.log(`${onlineCount === 4 ? COLORS.green : COLORS.yellow}  ${onlineCount === 4 ? '✓' : '⚠'} Server online su ${onlineCount}/4 porte.${COLORS.reset}`)
+        console.log(`${onlineCount === STUDIOS.length ? COLORS.green : COLORS.yellow}  ${onlineCount === STUDIOS.length ? '✓' : '⚠'} Server online su ${onlineCount}/${STUDIOS.length} porte.${COLORS.reset}`)
         try { openStudioBrowser(8765) } catch (_) {}
       } else {
         console.error(`${COLORS.red}  ✗ ${result.message}${COLORS.reset}`)
@@ -3629,12 +3811,13 @@ async function showAIInfluencerStudios() {
           console.error(`${COLORS.red}  ✗ ${result.message}${COLORS.reset}`)
           if (result.log) console.error(`${COLORS.dim}${result.log}${COLORS.reset}`)
         } else {
-          openStudioBrowser(studio.port)
-          console.log(`${COLORS.green}  ✓ Dashboard online e aperta: http://localhost:${studio.port}${COLORS.reset}`)
+          openStudioBrowser(studio.port, studio.path || '')
+          const targetUrl = `http://localhost:${studio.port}${studio.path || ''}`
+          console.log(`${COLORS.green}  ✓ Dashboard online e aperta: ${targetUrl}${COLORS.reset}`)
         }
       } catch (e) {
         console.error(`${COLORS.red}  ✗ Impossibile aprire il browser: ${e.message}${COLORS.reset}`)
-        console.log(`${COLORS.yellow}  Apri manualmente: http://localhost:${studio.port}${COLORS.reset}`)
+        console.log(`${COLORS.yellow}  Apri manualmente: http://localhost:${studio.port}${studio.path || ''}${COLORS.reset}`)
       }
     } else {
       console.log(`${COLORS.red}  Selezione non valida.${COLORS.reset}`)
@@ -3642,6 +3825,54 @@ async function showAIInfluencerStudios() {
     await waitForEnter()
     showMenu()
   })
+}
+
+async function launchProjectStudioDashboard() {
+  clearScreen()
+  console.log(`${COLORS.magenta}${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ ⚡ HERMES MULTI-PROJECT STUDIO & AUTOMATED IDEA GENERATOR (PORTA 8765)                  ║`)
+  console.log(`╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+  console.log(`  ${COLORS.cyan}Verifica e avvio del server Hermes AI Studios sulla porta 8765...${COLORS.reset}`)
+  const result = await ensureStudioOnline(8765)
+  if (!result.ok) {
+    console.error(`${COLORS.red}  ✗ Errore avvio server: ${result.message}${COLORS.reset}`)
+    if (result.log) console.error(`${COLORS.dim}${result.log}${COLORS.reset}`)
+  } else {
+    const url = 'http://localhost:8765/project-studio'
+    try {
+      openBrowserUrl(url)
+      console.log(`${COLORS.green}  ✓ Master Multi-Project Studio aperto nel browser: ${url}${COLORS.reset}`)
+    } catch (e) {
+      console.error(`${COLORS.red}  ✗ Impossibile aprire automaticamente il browser: ${e.message}${COLORS.reset}`)
+      console.log(`${COLORS.yellow}  Apri manualmente: ${url}${COLORS.reset}`)
+    }
+  }
+  await waitForEnter()
+  showMenu()
+}
+
+async function launchAwordDashboard() {
+  clearScreen()
+  console.log(`${COLORS.blue}${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗`)
+  console.log(`║ 🗣️ AWORD LANGUAGE CONTENT MATRIX — 260 VIDEO & CAROSELLI (PORTA 8769)                   ║`)
+  console.log(`╚══════════════════════════════════════════════════════════════════════════════════════════╝${COLORS.reset}\n`)
+  console.log(`  ${COLORS.cyan}Verifica e avvio del server Hermes AI Studios sulla porta 8769...${COLORS.reset}`)
+  const result = await ensureStudioOnline(8769)
+  if (!result.ok) {
+    console.error(`${COLORS.red}  ✗ Errore avvio server: ${result.message}${COLORS.reset}`)
+    if (result.log) console.error(`${COLORS.dim}${result.log}${COLORS.reset}`)
+  } else {
+    const url = 'http://localhost:8769/aword-dashboard'
+    try {
+      openBrowserUrl(url)
+      console.log(`${COLORS.green}  ✓ Dashboard Aword aperta nel browser: ${url}${COLORS.reset}`)
+    } catch (e) {
+      console.error(`${COLORS.red}  ✗ Impossibile aprire automaticamente il browser: ${e.message}${COLORS.reset}`)
+      console.log(`${COLORS.yellow}  Apri manualmente: ${url}${COLORS.reset}`)
+    }
+  }
+  await waitForEnter()
+  showMenu()
 }
 
 function waitForEnter() {
@@ -3669,7 +3900,8 @@ if (args.length > 0) {
   --ecommerce, -e           Open E-Commerce Master Control & Multi-Store Hub
   --influencer-landings     Open Influencer Landings Hub (V1-V10)
   --influencer-landing [N]  Open specific Influencer Landing SVG mock (1..10)
-  --golden-scrollytelling   Open Golden Scrollytelling Standard Hub (Shoe Craftsman 01)
+  --golden-scrollytelling   Open Golden Scrollytelling Standard Hub (Don Gennaro Calzature :3005)
+  --scarpe-su-misura, --don-gennaro Open Don Gennaro Calzature Napoli Store (:3005)
   --scrollytelling-blueprint Show Implementation Blueprint (Three.js & GSAP)
   --scrollytelling-video    Show AI Video Generation Prompt Bible
   --comm-templates          Open Communication Templates Suite Hub
@@ -3680,20 +3912,24 @@ if (args.length > 0) {
   --auto-translation, -tr   Open Multi-Language & Automatic Translation Hub
   --languages               List supported locales and metadata as JSON
   --translate [text] [lang] Test translation with luxury glossary preservation
-  --moser-admin             Open Moser Commerce Admin Area in browser (:8080/admin)
-  --moser-consumer          Open Moser Commerce Consumer Storefront in browser (:8080/)
-  --moser-business          Open Moser Commerce Business Company Dashboard (:8080/company/control-center)
-  --new-ecommerce           Open New E-Commerce Creation Wizard in browser (:8080/admin/new-ecommerce)
-  --creative-studio         Open Creative Studio 3D & Motion Promo in browser (:8080/admin/creative-studio)
+  --moser-dev, --moser-storefront Launch Moser Storefront React Vite (PortManager Governed)
+  --moser-all               Launch both Storefront and Medusa Backend (PortManager Governed)
+  --moser-admin             Open Moser Commerce Admin Area in browser (PortManager Governed)
+  --moser-consumer          Open Moser Commerce Consumer Storefront in browser (PortManager Governed)
+  --moser-business          Open Moser Commerce Business Company Dashboard (PortManager Governed)
+  --new-ecommerce           Open New E-Commerce Creation Wizard in browser (PortManager Governed)
+  --creative-studio         Open Creative Studio 3D & Motion Promo in browser (PortManager Governed)
   --store-admin [store]     Open Admin Area for any created store (Moser or derived)
   --store-consumer [store]  Open Consumer Area for any created store (Moser or derived)
   --store-business [store]  Open Business Area for any created store (Moser or derived)
-  --start-ecommerce         Start both Storefront (:8080) and Medusa Backend (:9000)
-  --stop-ecommerce          Stop and release E-Commerce ports 8080 and 9000
+  --start-ecommerce         Start both Storefront and Medusa Backend via PortManager
+  --stop-ecommerce          Stop and release E-Commerce ports allocated by PortManager
   --quality-ecommerce       Run full quality and contracts suite for Moser Commerce
   --studios, -s             Open AI Influencer Studios Dashboard (Orazio/Giuly/etc.)
+  --aword, --aword-dashboard, -aw Open Aword Language Content Matrix Dashboard (:8769)
+  --project-studio, -ps     Open Multi-Project Studio & Automated Idea Generator (:8765/project-studio)
   --studios-start           Start and verify all AI Studios ports without opening a browser
-  --studios-health          Print machine-readable health for ports 8765-8768
+  --studios-health          Print machine-readable health for ports 8765-8769
   --ldg, --ldg-innovation   Open LDG Innovation Master Control Hub
   --ldg-dev                 Start LDG Innovation Next.js 15 Dev Server (port 3000)
   --ldg-b2b                 Run LDG Innovation B2B Acquisition Suite
@@ -3745,7 +3981,7 @@ if (args.length > 0) {
     handleChoice('I')
   } else if (command === '--ldg-dev' || command === 'ldg-dev') {
     console.log(`Starting LDG Innovation Next.js 15 dev server...`)
-    execSync(`start "LDG Innovation Next.js (Port 3000)" powershell -NoExit -Command "Set-Location '${B2B_PROJECT}'; npm run dev"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
+    execSync(`start "LDG Innovation Next.js (Port 3000)" cmd.exe /k "cd /d \"${B2B_PROJECT}\" && npm run dev"`, { cwd: B2B_PROJECT, shell: 'cmd.exe' })
     process.exit(0)
   } else if (command === '--ldg-b2b' || command === 'ldg-b2b') {
     console.log(`Running LDG Innovation B2B Suite v2...`)
@@ -3755,8 +3991,10 @@ if (args.length > 0) {
   } else if (command === '--pi' || command === '--pi-kimi' || command === 'pi' || command === 'pi-kimi' || command === '-2') {
     const piKimi = path.join(PI_DIR, 'pi-kimi.bat')
     const passArgs = args.slice(1).join(' ')
-    execSync(`call "${piKimi}" ${passArgs}`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
-    process.exit(0)
+    process.stdin.pause()
+    if (process.stdin.setRawMode) process.stdin.setRawMode(false)
+    const res = spawnSync('cmd.exe', ['/c', `call "${piKimi}" ${passArgs}`], { stdio: 'inherit', cwd: HERMES_ROOT, windowsHide: false })
+    process.exit(res.status ?? 0)
   } else if (command === '--repo-audit' || command === 'repo-audit') {
     const auditScript = path.join(HERMES_ROOT, 'tools', 'tuios', 'repo_audit_real.cjs')
     try { execSync(`node "${auditScript}"`, { stdio: 'inherit', cwd: HERMES_ROOT }); process.exit(0) }
@@ -3896,6 +4134,14 @@ if (args.length > 0) {
       console.error(`Mockup non trovato per V${ver}: ${svgPath}`)
       process.exit(1)
     }
+  } else if (command === '--scarpe-su-misura' || command === '--artigiano-scarpe' || command === '--scarpe' || command === 'scarpe' || command === '--don-gennaro') {
+    (async () => {
+      const activePort = await ensureDonGennaroRunning()
+      const targetUrl = `http://localhost:${activePort}`
+      openBrowserUrl(targetUrl)
+      console.log(`\x1b[32m  ✓ Aperto Store Don Gennaro Calzature Napoli: ${targetUrl}\x1b[0m`)
+      process.exit(0)
+    })()
   } else if (command === '--golden-scrollytelling' || command === '--scrollytelling' || command === 'scrollytelling' || command === '-gs') {
     showGoldenScrollytellingHub()
   } else if (command === '--scrollytelling-blueprint') {
@@ -3934,81 +4180,115 @@ if (args.length > 0) {
     const result = executeCliTranslation(text, targetLang)
     console.log(JSON.stringify(result, null, 2))
     process.exit(0)
+  } else if (command === '--moser-dev' || command === 'moser-dev' || command === '--moser-storefront' || command === 'moser-storefront') {
+    getEcommercePorts().then(ports => {
+      console.log(`Avvio Storefront React Vite con PortManager (porta ${ports.storefrontPort})...`)
+      const launchScript = path.join(MOSER_PROJECT, 'scripts', 'launch-with-port-manager.cjs')
+      if (fs.existsSync(launchScript)) {
+        execSync(`start "Moser Storefront (Port ${ports.storefrontPort})" node "${launchScript}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+      } else {
+        execSync(`start "Moser Storefront (Port ${ports.storefrontPort})" cmd.exe /k "cd /d \"${MOSER_PROJECT}\" && npm run dev -- --port ${ports.storefrontPort}"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+      }
+      process.exit(0)
+    })
+  } else if (command === '--moser-all' || command === 'moser-all') {
+    getEcommercePorts().then(ports => {
+      console.log(`Avvio Storefront (${ports.storefrontPort}) e Medusa Backend (${ports.medusaPort}) con PortManager...`)
+      const launchScript = path.join(MOSER_PROJECT, 'scripts', 'launch-with-port-manager.cjs')
+      if (fs.existsSync(launchScript)) {
+        execSync(`start "Moser Dual Servers" node "${launchScript}" --all`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+      }
+      process.exit(0)
+    })
   } else if (command === '--moser-admin' || command === 'moser-admin') {
-    ensureStorefrontRunning().then(() => {
-      openBrowserUrl('http://localhost:8080/admin')
-      console.log('Aperta Area Amministrativa Moser: http://localhost:8080/admin')
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      openBrowserUrl(`http://localhost:${storefrontPort}/admin`)
+      console.log(`Aperta Area Amministrativa Moser: http://localhost:${storefrontPort}/admin`)
       process.exit(0)
     })
   } else if (command === '--moser-consumer' || command === 'moser-consumer') {
-    ensureStorefrontRunning().then(() => {
-      openBrowserUrl('http://localhost:8080/')
-      console.log('Aperta Area Consumer Moser: http://localhost:8080/')
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      openBrowserUrl(`http://localhost:${storefrontPort}/`)
+      console.log(`Aperta Area Consumer Moser: http://localhost:${storefrontPort}/`)
       process.exit(0)
     })
   } else if (command === '--moser-business' || command === 'moser-business') {
-    ensureStorefrontRunning().then(() => {
-      openBrowserUrl('http://localhost:8080/company/control-center')
-      console.log('Aperta Area Business Moser: http://localhost:8080/company/control-center')
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      openBrowserUrl(`http://localhost:${storefrontPort}/company/control-center`)
+      console.log(`Aperta Area Business Moser: http://localhost:${storefrontPort}/company/control-center`)
       process.exit(0)
     })
   } else if (command === '--new-ecommerce' || command === '--wizard' || command === 'new-ecommerce') {
-    ensureStorefrontRunning().then(() => {
-      openBrowserUrl('http://localhost:8080/admin/new-ecommerce')
-      console.log('Aperto New E-Commerce Wizard: http://localhost:8080/admin/new-ecommerce')
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      openBrowserUrl(`http://localhost:${storefrontPort}/admin/new-ecommerce`)
+      console.log(`Aperto New E-Commerce Wizard: http://localhost:${storefrontPort}/admin/new-ecommerce`)
       process.exit(0)
     })
   } else if (command === '--creative-studio' || command === 'creative-studio') {
-    ensureStorefrontRunning().then(() => {
-      openBrowserUrl('http://localhost:8080/admin/creative-studio')
-      console.log('Aperto Creative Studio: http://localhost:8080/admin/creative-studio')
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      openBrowserUrl(`http://localhost:${storefrontPort}/admin/creative-studio`)
+      console.log(`Aperto Creative Studio: http://localhost:${storefrontPort}/admin/creative-studio`)
       process.exit(0)
     })
   } else if (command === '--access-control' || command === '--rbac') {
-    ensureStorefrontRunning().then(() => {
-      openBrowserUrl('http://localhost:8080/admin/access-control')
-      console.log('Aperto Access Control & RBAC: http://localhost:8080/admin/access-control')
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      openBrowserUrl(`http://localhost:${storefrontPort}/admin/access-control`)
+      console.log(`Aperto Access Control & RBAC: http://localhost:${storefrontPort}/admin/access-control`)
       process.exit(0)
     })
   } else if (command === '--discovery-lab' || command === 'discovery-lab') {
-    ensureStorefrontRunning().then(() => {
-      openBrowserUrl('http://localhost:8080/admin/discovery-lab-ops')
-      console.log('Aperto Discovery Lab Ops: http://localhost:8080/admin/discovery-lab-ops')
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      openBrowserUrl(`http://localhost:${storefrontPort}/admin/discovery-lab-ops`)
+      console.log(`Aperto Discovery Lab Ops: http://localhost:${storefrontPort}/admin/discovery-lab-ops`)
       process.exit(0)
     })
   } else if (command === '--store-admin') {
     const storeTarget = args[1] || 'moser-commerce'
-    ensureStorefrontRunning().then(() => {
-      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/admin` : `http://localhost:8080/admin?store=${encodeURIComponent(storeTarget)}`
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/admin` : `http://localhost:${storefrontPort}/admin?store=${encodeURIComponent(storeTarget)}`
       openBrowserUrl(url)
       console.log(`Aperta Area Amministrativa Store: ${url}`)
       process.exit(0)
     })
   } else if (command === '--store-consumer') {
     const storeTarget = args[1] || 'moser-commerce'
-    ensureStorefrontRunning().then(() => {
-      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/` : `http://localhost:8080?store=${encodeURIComponent(storeTarget)}`
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/` : `http://localhost:${storefrontPort}?store=${encodeURIComponent(storeTarget)}`
       openBrowserUrl(url)
       console.log(`Aperta Area Consumer Store: ${url}`)
       process.exit(0)
     })
   } else if (command === '--store-business') {
     const storeTarget = args[1] || 'moser-commerce'
-    ensureStorefrontRunning().then(() => {
-      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/company/dashboard` : `http://localhost:8080/company/dashboard?store=${encodeURIComponent(storeTarget)}`
+    ensureStorefrontRunning().then(async () => {
+      const { storefrontPort } = await getEcommercePorts()
+      const url = storeTarget.startsWith('http') ? `${storeTarget.replace(/\/+$/, '')}/company/dashboard` : `http://localhost:${storefrontPort}/company/dashboard?store=${encodeURIComponent(storeTarget)}`
       openBrowserUrl(url)
       console.log(`Aperta Area Business Store: ${url}`)
       process.exit(0)
     })
   } else if (command === '--start-ecommerce' || command === 'start-ecommerce') {
-    console.log('Avvio storefront :8080 e Medusa backend :9000...')
-    execSync(`start "Moser Storefront (Port 8080)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
-    execSync(`start "Moser Medusa Backend (Port 9000)" powershell -NoExit -Command "Set-Location '${MOSER_PROJECT}'; npm run medusa:dev"`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
-    process.exit(0)
+    getEcommercePorts().then(ports => {
+      console.log(`Avvio Storefront (porta ${ports.storefrontPort}) e Backend API (porta ${ports.medusaPort}) via PortManager...`)
+      const launchScript = path.join(MOSER_PROJECT, 'scripts', 'launch-with-port-manager.cjs')
+      execSync(`start "Moser Dual Servers" node "${launchScript}" --all`, { shell: 'cmd.exe', cwd: MOSER_PROJECT })
+      process.exit(0)
+    })
   } else if (command === '--stop-ecommerce' || command === 'stop-ecommerce') {
-    const killed = killPorts([8080, 9000])
-    console.log(`Server E-Commerce arrestati (${killed.length} processi terminati). Porte 8080 e 9000 liberate.`)
-    process.exit(0)
+    getEcommercePorts().then(ports => {
+      const killed = killPorts([ports.storefrontPort, ports.medusaPort])
+      console.log(`Server E-Commerce arrestati (${killed.length} processi terminati). Porte ${ports.storefrontPort} e ${ports.medusaPort} liberate.`)
+      process.exit(0)
+    })
   } else if (command === '--quality-ecommerce' || command === '--ecommerce-quality') {
     try {
       execSync('npm run quality', { stdio: 'inherit', cwd: MOSER_PROJECT })
@@ -4036,6 +4316,18 @@ if (args.length > 0) {
     const piBat = path.join(PI_DIR, 'pi.bat')
     execSync(`call "${piBat}" --r1`, { stdio: 'inherit', cwd: HERMES_ROOT, shell: 'cmd.exe' })
     process.exit(0)
+  } else if (command === '--project-studio' || command === '--projects' || command === '--generator' || command === '-ps') {
+    handleChoice('PS')
+  } else if (command === '--aword' || command === '--aword-dashboard' || command === 'aword' || command === '-aw') {
+    ensureStudioOnline(8769).then(result => {
+      const url = 'http://localhost:8769/aword-dashboard'
+      openBrowserUrl(url)
+      console.log(`\x1b[32m  ✓ Dashboard Aword aperta nel browser: ${url}\x1b[0m`)
+      process.exit(0)
+    }).catch(err => {
+      console.error('Errore avvio Aword:', err.message)
+      process.exit(1)
+    })
   } else {
     console.log(`Unknown command: ${command}. Launching interactive TUIOS...`)
     showMenu()
