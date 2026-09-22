@@ -1,3 +1,4 @@
+
 name: End-to-end TUI regressions
 
 # Drives a real tuios binary in a real PTY and asserts on the rendered screen.
@@ -5,11 +6,9 @@ name: End-to-end TUI regressions
 # stock runner with no xvfb or tmux.
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
+  # Automatic triggers removed; invoke through FounderOS/Admin Gate.
 permissions:
   contents: read
 

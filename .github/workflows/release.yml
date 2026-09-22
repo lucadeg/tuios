@@ -1,10 +1,9 @@
+
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
-
+  workflow_dispatch:
+  # Automatic triggers removed; invoke through FounderOS/Admin Gate.
 permissions:
   contents: write
   packages: write
