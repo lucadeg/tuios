@@ -28,6 +28,14 @@ const FOUNDER_OS_BACKEND = path.join(FOUNDER_OS_DIR, 'backend')
 const FOUNDER_OS_DB = path.join(FOUNDER_OS_BACKEND, 'data', 'founder-os.db')
 const FOUNDER_OS_FRONTEND_BAT = path.join(FOUNDER_OS_FRONTEND, 'start.bat')
 const FOUNDER_OS_BACKEND_BAT = path.join(FOUNDER_OS_BACKEND, 'start.bat')
+const WINDOWS_USER_HOME = process.env.USERPROFILE || 'C:\\Users\\Deglu'
+const ALWAYS_ON_CONTROL_CANDIDATES = [
+  path.join(WINDOWS_USER_HOME, 'FounderOS-Recovery-Console', 'Invoke-FounderOS-AlwaysOnControl.ps1'),
+  path.join(HERMES_ROOT, 'Auto-Multi-PC', 'modules', 'windows-headless-runtime', 'Invoke-FounderOS-AlwaysOnControl.ps1'),
+  path.join(HERMES_ROOT, 'mechaHD', 'Auto-Multi-PC', 'modules', 'windows-headless-runtime', 'Invoke-FounderOS-AlwaysOnControl.ps1'),
+  path.join(HERMES_ROOT, 'MVX_Hermes_FounderOS', 'modules', 'windows-headless-runtime', 'Invoke-FounderOS-AlwaysOnControl.ps1')
+]
+const ALWAYS_ON_ADMIN_GATE = path.join(WINDOWS_USER_HOME, 'FounderOS-Recovery-Console', 'admin-gate', 'Request-FounderOS-AdminAction.ps1')
 const DON_GENNARO_PROJECT = path.join(HERMES_ROOT, 'mechaHD', 'don-gennaro-calzature-napoli')
 const DON_GENNARO_PORT = 3005
 
@@ -1324,6 +1332,146 @@ function openBrowserUrl(url) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ALWAYS-ON WINDOWS CONTROL PLANE: TAILSCALE + DESKTOP COMMANDER + FOUNDEROS MONITOR
+// ─────────────────────────────────────────────────────────────────────────────
+
+function resolveAlwaysOnControlScript() {
+  return ALWAYS_ON_CONTROL_CANDIDATES.find(candidate => fs.existsSync(candidate)) || null
+}
+
+function normalizeAlwaysOnTarget(value) {
+  const v = String(value || 'all').trim().toLowerCase()
+  if (['all', '*'].includes(v)) return 'All'
+  if (['tailscale', 'ts'].includes(v)) return 'Tailscale'
+  if (['desktopcommander', 'desktop-commander', 'desktop_commander', 'dc'].includes(v)) return 'DesktopCommander'
+  if (['founderosmonitor', 'founder-os-monitor', 'founderos-monitor', 'monitor', 'fos-monitor', 'fm'].includes(v)) return 'FounderOSMonitor'
+  return null
+}
+
+function psSingleQuote(value) {
+  return String(value).replace(/'/g, "''")
+}
+
+function runAlwaysOnControl(target, action, options = {}) {
+  if (process.platform !== 'win32') {
+    console.error('Always-on runtime control is available on Windows only.')
+    return 2
+  }
+  const script = resolveAlwaysOnControlScript()
+  if (!script) {
+    console.error('FounderOS always-on control script not found. Run the FounderOS Windows bootstrap/monitor installer first.')
+    return 2
+  }
+  const normalized = normalizeAlwaysOnTarget(target)
+  if (!normalized) {
+    console.error(`Unknown always-on target: ${target}`)
+    return 2
+  }
+  const privileged = action === 'Repair' || action === 'InstallAutostart'
+  if (privileged && fs.existsSync(ALWAYS_ON_ADMIN_GATE) && options.useAdminGate !== false) {
+    const operation = `founderos_always_on_${normalized.toLowerCase()}_${action.toLowerCase()}`
+    const description = `Repair/install autostart for ${normalized} through FounderOS governed admin approval.`
+    const command = [
+      `& '${psSingleQuote(ALWAYS_ON_ADMIN_GATE)}'`,
+      `-PayloadScript '${psSingleQuote(script)}'`,
+      `-PayloadArgs @('-Target','${psSingleQuote(normalized)}','-Action','${psSingleQuote(action)}')`,
+      `-Operation '${psSingleQuote(operation)}'`,
+      `-Description '${psSingleQuote(description)}'`,
+      `-ExpectedEffects @('Windows startup configuration','service or scheduled-task repair','process restart when required')`,
+      `-Rollback 'Disable the repaired scheduled task/service startup and restore the previous task/service configuration.'`,
+      `-Risk 'high'`
+    ].join(' ')
+    const gated = spawnSync('powershell.exe', ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command], {
+      stdio: 'inherit',
+      windowsHide: false
+    })
+    return gated.status === null ? 1 : gated.status
+  }
+  const result = spawnSync('powershell.exe', [
+    '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+    '-File', script, '-Target', normalized, '-Action', action
+  ], {
+    stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+    encoding: options.capture ? 'utf8' : undefined,
+    windowsHide: !options.interactive
+  })
+  if (options.capture) {
+    if (result.stdout) process.stdout.write(result.stdout)
+    if (result.stderr) process.stderr.write(result.stderr)
+  }
+  return result.status === null ? 1 : result.status
+}
+
+async function showAlwaysOnTargetHub(target) {
+  const normalized = normalizeAlwaysOnTarget(target)
+  if (!normalized) return showAlwaysOnHub()
+  clearScreen()
+  console.log(`${COLORS.cyan}${COLORS.bright}ALWAYS-ON CONTROL — ${normalized}${COLORS.reset}\n`)
+  console.log('  [1] Status')
+  console.log('  [2] Start / reconnect')
+  console.log('  [3] Restart')
+  console.log('  [4] Repair + reinstall autostart')
+  if (normalized === 'Tailscale') {
+    console.log('  [5] Login interactive')
+    console.log('  [6] Logout')
+    console.log('  [7] Switch account manually')
+    console.log('  [8] Open Tailscale admin')
+    console.log('  [9] Stop service')
+  } else if (normalized === 'DesktopCommander') {
+    console.log('  [5] Pair / login interactive')
+    console.log('  [6] Disconnect local agent + open account dashboard')
+    console.log('  [7] Switch account manually (dashboard revoke + new pairing)')
+    console.log('  [8] Open Desktop Commander account/devices')
+    console.log('  [9] Stop local watchdog/agent')
+  } else {
+    console.log('  [5] Show / restore monitor')
+    console.log('  [9] Stop monitor/watchdog manually')
+  }
+  console.log('  [0] Back')
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question('  Select action: ', async choice => {
+    rl.close()
+    const key = String(choice || '').trim()
+    const actionMap = { '1': 'Status', '2': 'Start', '3': 'Restart', '4': 'Repair', '5': normalized === 'FounderOSMonitor' ? 'Open' : 'Login', '6': 'Logout', '7': 'SwitchAccount', '8': 'Open', '9': 'Stop' }
+    if (key === '0') return showAlwaysOnHub()
+    const action = actionMap[key]
+    if (!action || (normalized === 'FounderOSMonitor' && ['6','7','8'].includes(key))) return showAlwaysOnTargetHub(normalized)
+    runAlwaysOnControl(normalized, action, { interactive: ['Login','Logout','SwitchAccount','Open'].includes(action), capture: action === 'Status' })
+    await waitForEnter()
+    showAlwaysOnTargetHub(normalized)
+  })
+}
+
+async function showAlwaysOnHub() {
+  clearScreen()
+  console.log(`${COLORS.yellow}${COLORS.bright}ALWAYS-ON RUNTIME CONTROL PLANE${COLORS.reset}`)
+  console.log('  Tailscale + Desktop Commander + FounderOS Operations Monitor\n')
+  console.log('  [1] Status all')
+  console.log('  [2] Start all')
+  console.log('  [3] Restart all')
+  console.log('  [4] Repair/install autostart all (FounderOS admin approval)')
+  console.log('  [T] Tailscale management')
+  console.log('  [D] Desktop Commander management')
+  console.log('  [M] FounderOS Monitor management')
+  console.log('  [0] Back')
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.question('  Select action: ', async choice => {
+    rl.close()
+    const key = String(choice || '').trim().toUpperCase()
+    if (key === '0') return showMenu()
+    if (key === 'T') return showAlwaysOnTargetHub('Tailscale')
+    if (key === 'D') return showAlwaysOnTargetHub('DesktopCommander')
+    if (key === 'M') return showAlwaysOnTargetHub('FounderOSMonitor')
+    const actionMap = { '1': 'Status', '2': 'Start', '3': 'Restart', '4': 'Repair' }
+    const action = actionMap[key]
+    if (!action) return showAlwaysOnHub()
+    runAlwaysOnControl('All', action, { capture: action === 'Status' })
+    await waitForEnter()
+    showAlwaysOnHub()
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FOUNDER OS SUITE & EXECUTIVE CONTROL CENTER (OPZIONE [1] / [FOS])
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1464,11 +1612,12 @@ async function showFounderOsHub() {
   console.log(`  [5]  ${COLORS.red}🛑 Arresta Server Founder OS${COLORS.reset}           (Libera porte 5173 e 3001)`)
   console.log(`  [6]  ${COLORS.cyan}📊 Ispezione Approfondita Database${COLORS.reset}     (Statistiche tabelle, KPI, OKR e task)`)
   console.log(`  [7]  ${COLORS.magenta}📁 Apri Directory Founder OS${COLORS.reset}           (Esplora cartella sorgente)`)
+  console.log(`  [8]  ${COLORS.cyan}Always-On Runtime Control${COLORS.reset}             (Tailscale, Desktop Commander, FounderOS Monitor)`)
   console.log(`  [0]  ${COLORS.dim}Torna al Menu Principale TUIOS${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  rl.question(`  ${COLORS.bright}Seleziona azione Founder OS (1-7, 0): ${COLORS.reset}`, async (choice) => {
+  rl.question(`  ${COLORS.bright}Seleziona azione Founder OS (1-8, 0): ${COLORS.reset}`, async (choice) => {
     rl.close()
     const c = (choice || '').trim().toUpperCase()
     switch (c) {
@@ -1529,6 +1678,12 @@ async function showFounderOsHub() {
       case 'DIR': {
         execSync(`explorer "${FOUNDER_OS_DIR}"`, { shell: 'cmd.exe' })
         showFounderOsHub()
+        break
+      }
+      case '8':
+      case 'ALWAYS_ON':
+      case 'SERVICES': {
+        await showAlwaysOnHub()
         break
       }
       case '0':
@@ -3266,6 +3421,7 @@ async function showMenu() {
   console.log(`  [M]  ${COLORS.magenta}${COLORS.bright}🔲 Terminal Multiplexer Dual/Quad${COLORS.reset}         (Split-screen 2x/4x pannelli sincronizzati)`)
   console.log(`  [X]  ${COLORS.cyan}🪟 Crea Più Terminali PowerShell${COLORS.reset}          (Multi-window; Windows Terminal se presente)`)
   console.log(`  [6]  ${COLORS.yellow}⚡ Local Gateway & Port Status${COLORS.reset}            (Hydra 8090, Kimi bridge 8095, servizi locali)`)
+  console.log(`  [AO] ${COLORS.cyan}${COLORS.bright}Always-On Runtime Control${COLORS.reset}               (Tailscale, Desktop Commander, FounderOS Monitor)`)
   console.log(`  [9]  ${COLORS.red}${COLORS.bright}🛑 Chiudi TUTTI i Processi Attivi${COLORS.reset}         (Kill all servers :8765-8768, :8090, :5199, :3000, :5173, :3001)`)
   console.log(`  [0]  ${COLORS.dim}🚪 Esci da TUIOS${COLORS.reset}`)
   console.log(`  ──────────────────────────────────────────────────────────────────────────────────────────`)
@@ -3282,6 +3438,13 @@ async function handleChoice(choice) {
   console.log('')
   const c = choice.toUpperCase()
   switch (c) {
+    case 'AO':
+    case 'ALWAYS_ON':
+    case 'SERVICES':
+    case 'AUTOSTART': {
+      await showAlwaysOnHub()
+      break
+    }
     case 'I':
     case 'LDG':
     case 'INNOVATION': {
@@ -3895,6 +4058,16 @@ if (args.length > 0) {
   --founder-start           Start both Founder OS Frontend (:5173) and Backend (:3001)
   --founder-stop            Stop and release Founder OS ports 5173 and 3001
   --founder-status          Print machine-readable status for ports 5173 and 3001
+  --always-on               Open Tailscale/Desktop Commander/FounderOS Monitor control hub
+  --always-on-status [target] Print status (target: all|tailscale|desktop-commander|monitor)
+  --always-on-start [target] Start/reconnect target; default all
+  --always-on-restart [target] Restart target; default all
+  --always-on-repair [target] Repair autostart through FounderOS admin approval; default all
+  --always-on-login <target> Interactive login/pairing for tailscale or desktop-commander
+  --always-on-logout <target> Logout/disconnect target
+  --always-on-switch-account <target> Manual account switch flow
+  --always-on-open <target> Open account/admin UI or restore monitor
+  --always-on-stop <target> Stop target manually
   --doctor                  Audit menu capabilities and runtime prerequisites as JSON
   --kill-all, --stop-all    Kill all active background processes and release ports 8765-8768, 8090, 8095, 5199, 3000, 8080, 9000, 8989, 5173, 3001
   --ecommerce, -e           Open E-Commerce Master Control & Multi-Store Hub
@@ -3961,6 +4134,33 @@ if (args.length > 0) {
       console.error(err.message)
       process.exit(1)
     })
+  } else if (command === '--always-on' || command === 'always-on' || command === '--services') {
+    handleChoice('AO')
+  } else if (['--always-on-status','--always-on-start','--always-on-restart','--always-on-repair','--always-on-login','--always-on-logout','--always-on-switch-account','--always-on-open','--always-on-stop'].includes(command)) {
+    const action = ({
+      '--always-on-status': 'Status',
+      '--always-on-start': 'Start',
+      '--always-on-restart': 'Restart',
+      '--always-on-repair': 'Repair',
+      '--always-on-login': 'Login',
+      '--always-on-logout': 'Logout',
+      '--always-on-switch-account': 'SwitchAccount',
+      '--always-on-open': 'Open',
+      '--always-on-stop': 'Stop'
+    })[command]
+    const needsTarget = ['Login','Logout','SwitchAccount','Open','Stop'].includes(action)
+    const rawTarget = args[1] || (needsTarget ? '' : 'all')
+    const target = normalizeAlwaysOnTarget(rawTarget)
+    if (!target) {
+      console.error('Target required/invalid. Use: tailscale | desktop-commander | monitor | all (all only for status/start/restart/repair).')
+      process.exit(2)
+    }
+    if (needsTarget && target === 'All') {
+      console.error(`Action ${action} requires a specific target.`)
+      process.exit(2)
+    }
+    const status = runAlwaysOnControl(target, action, { interactive: ['Login','Logout','SwitchAccount','Open'].includes(action), capture: action === 'Status' })
+    process.exit(status)
   } else if (command === '--founder' || command === '--founder-os' || command === 'founder' || command === 'founder-os' || command === '-f' || command === '--fos') {
     handleChoice('1')
   } else if (command === '--founder-start') {
