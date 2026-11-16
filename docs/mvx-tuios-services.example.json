@@ -1,0 +1,30 @@
+{
+  "schema": "mvx.tuios.services.v1",
+  "services": {
+    "founder-os": {
+      "projectPath": "MVX-founder-OS",
+      "origin": "http://127.0.0.1:3001",
+      "operations": {
+        "health": {
+          "method": "GET",
+          "path": "/api/health",
+          "authenticated": false
+        }
+      }
+    },
+    "founder-os-monitor": {
+      "projectPath": "FOMO",
+      "operations": {}
+    },
+    "mvx-saas-master-ldg": {
+      "operations": {}
+    },
+    "mvx-saas-master-customer": {
+      "operations": {}
+    },
+    "mvx-trading-master-v2": {
+      "projectPath": "MVX_TRADING_MASTER_V2",
+      "operations": {}
+    }
+  }
+}
