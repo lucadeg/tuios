@@ -22,7 +22,7 @@ The equivalent direct CLI is `node mvx-project-launcher.cjs list|devices|status|
 
 | Project | Dev | Production |
 | --- | --- | --- |
-| MVX IDE TAURUS | `npm run dev`, loopback `127.0.0.1:1420`, browser only without native IAM | Only native `target/release/mvx-ide-taurus.exe`, with `MVX_KEYCLOAK_ISSUER` and `MVX_KEYCLOAK_CLIENT_ID` supplied by the environment. No web production bypass. A successful login still requires Keycloak runtime verification |
+| MVX IDE TAURUS | `npm run dev`, loopback `127.0.0.1:1420`, browser only without native IAM | Only native `target/release/mvx-ide-taurus.exe`, with `MVX_KEYCLOAK_ISSUER` and `MVX_KEYCLOAK_CLIENT_ID` supplied by the environment. The issuer must be HTTPS and Windows Authenticode must report a trusted **Valid** signature on the native executable. No web production bypass. A successful login still requires Keycloak runtime verification |
 | MVX Light Monitor | `npm run dev`, loopback `127.0.0.1:1421` | Not certified. Refuses production until native IAM, signing and startup configuration have been validated |
 | Other registered projects | Catalogued, legacy TUIOS commands remain available; new auth-free profile disabled | Disabled until each service has its verified SSO/RBAC and deployment profile |
 
@@ -49,6 +49,11 @@ node --test clienttests/mvx-project-launcher.test.cjs
 The tests cover catalog and mode admission, explicit Keycloak requirements, refusal of unsupported production profiles, Tailscale-only target validation, nonexecuting Desktop Commander plans, and refusal of traversal outside `.hermes`.
 
 **Observed laptop QA, 17 November 2026:** TAURUS dev started via the new TUIOS launcher; its Vite server responded `HTTP 200 OK` on `127.0.0.1:1420`. A headless Microsoft Edge/Playwright run verified React rendered content, no native Keycloak login gate, no JavaScript page errors and exit code 0. This validates the *browser dev experience*, not every Tauri integration, the production IAM deployment, Tailscale connectivity or remote MCP automation.
+
+
+**Observed laptop QA, 17 November 2026 (Light Monitor):** the same launcher started its Vite dev server at `127.0.0.1:1421`, HTTP 200. A Microsoft Edge/Playwright browser smoke showed React content, no native login gate, zero page JavaScript errors and exit code 0. The visible host identity was *not verified*; this is a frontend smoke only.
+
+**Automated checks:** 7/7 launcher security tests passed on the laptop. The real TUIOS CLI `hermes-cli.js --mvx-devices` enumerated the privately configured device aliases without exposing credentials. Remote Tailscale end-to-end and a real Keycloak production sign-in were not tested.
 
 ## Restrictions and future integration
 
