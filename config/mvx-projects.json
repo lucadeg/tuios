@@ -1,0 +1,246 @@
+{
+  "version": 1,
+  "description": "MVX TUIOS central project inventory. Unsafe or unverified run profiles are deliberately disabled.",
+  "projects": [
+    {
+      "id": "mvx-ide-taurus",
+      "name": "MVX IDE TAURUS",
+      "category": "IDE / DEUF",
+      "paths": [
+        "mvx-ide-taurus",
+        "MVX-IDE-Taurus"
+      ],
+      "repo": "lucadeg/MVX-IDE-Taurus",
+      "modes": {
+        "dev": {
+          "kind": "npm",
+          "script": "dev",
+          "port": 1420,
+          "auth": "browser-local-development-only"
+        },
+        "production": {
+          "kind": "binary",
+          "relative": "target/release/mvx-ide-taurus.exe",
+          "auth": "native-keycloak",
+          "requiredEnv": [
+            "MVX_KEYCLOAK_ISSUER",
+            "MVX_KEYCLOAK_CLIENT_ID"
+          ]
+        }
+      }
+    },
+    {
+      "id": "mvx-light-monitor",
+      "name": "MVX Light Monitor",
+      "category": "Monitoring",
+      "paths": [
+        "MVX-light-monitor",
+        "mvx-light-monitor"
+      ],
+      "repo": "lucadeg/MVX-light-monitor",
+      "modes": {
+        "dev": {
+          "kind": "npm",
+          "script": "dev",
+          "port": 1421,
+          "auth": "browser-local-development-only"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Production native IAM and signed release not certified"
+        }
+      }
+    },
+    {
+      "id": "mvx-founder-os",
+      "name": "MVX Founder OS",
+      "category": "Governance",
+      "paths": [
+        "MVX-founder-OS",
+        "mvx-founder-os"
+      ],
+      "repo": "lucadeg/MVX-founder-OS",
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Existing TUIOS Founder OS launch remains available; auth-free profile not certified"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Keycloak and deployment profile not certified"
+        }
+      }
+    },
+    {
+      "id": "mvx-saas-master",
+      "name": "MVX SaaS Master",
+      "category": "Administration",
+      "paths": [
+        "MVX-saas-master",
+        "mvx-saas-master"
+      ],
+      "repo": "lucadeg/MVX-saas-master",
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Full OpenMercato launch topology not certified"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Production security admission and SSO incomplete"
+        }
+      }
+    },
+    {
+      "id": "mvx-collection-master",
+      "name": "MVX Collection Master",
+      "category": "Collection",
+      "paths": [
+        "MVX-collection-master",
+        "mvx-collection-master"
+      ],
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Explicit startup command and auth policy required"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Production IAM unverified"
+        }
+      }
+    },
+    {
+      "id": "mvx-ads-master",
+      "name": "MVX Ads Master",
+      "category": "Advertising",
+      "paths": [
+        "MVX-ads-master",
+        "mvx-ads-master"
+      ],
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Explicit startup command and auth policy required"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Production IAM unverified"
+        }
+      }
+    },
+    {
+      "id": "mvx-trading-master",
+      "name": "MVX Trading Master",
+      "category": "Trading",
+      "paths": [
+        "MVX-trading-master",
+        "mvx-trading-master"
+      ],
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Explicit startup command and auth policy required"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Production IAM unverified"
+        }
+      }
+    },
+    {
+      "id": "gregory-job-scout",
+      "name": "Gregory Job Scout",
+      "category": "Recruitment",
+      "paths": [
+        "Gregory-job-scout",
+        "gregory-job-scout"
+      ],
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Explicit startup command and auth policy required"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Production IAM unverified"
+        }
+      }
+    },
+    {
+      "id": "mvx-engineering",
+      "name": "MVX Engineering",
+      "category": "Engineering",
+      "paths": [
+        "MVX-engineering",
+        "mvx-engineering"
+      ],
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Explicit startup command and auth policy required"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Production IAM unverified"
+        }
+      }
+    },
+    {
+      "id": "mvx-project-nomad",
+      "name": "MVX Project Nomad",
+      "category": "Knowledge",
+      "paths": [
+        "MVX-project-nomad",
+        "mvx-project-nomad"
+      ],
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Offline repository; no certified running web server"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "Not a certified production service"
+        }
+      }
+    },
+    {
+      "id": "ldg-innovation",
+      "name": "LDG Innovation",
+      "category": "Innovation",
+      "paths": [
+        "LDG_INNOVATION",
+        "mechaHD/LDG_INNOVATION"
+      ],
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Legacy TUIOS --ldg-dev launcher; auth-free profile not certified"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "IAM profile required"
+        }
+      }
+    },
+    {
+      "id": "moser-commerce",
+      "name": "Moser Commerce",
+      "category": "E-commerce",
+      "paths": [
+        "mechaHD/Moser-commerce"
+      ],
+      "modes": {
+        "dev": {
+          "kind": "unconfigured",
+          "reason": "Use existing --moser-dev; auth-free profile not certified"
+        },
+        "production": {
+          "kind": "unconfigured",
+          "reason": "IAM profile required"
+        }
+      }
+    }
+  ]
+}
