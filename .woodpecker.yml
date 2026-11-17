@@ -1,0 +1,11 @@
+# MVX TUIOS: safety-gated Node launcher checks. No remote deployment by CI.
+when:
+  - event: [push, pull_request]
+
+steps:
+  mvx-device-launcher-contract:
+    image: node:24-alpine
+    commands:
+      - node --check mvx-project-launcher.cjs
+      - node --check hermes-cli.js
+      - node --test clienttests/mvx-project-launcher.test.cjs

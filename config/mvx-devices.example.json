@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "devices": [
+    {
+      "id": "laptop",
+      "os": "windows",
+      "sshUser": "your-ssh-user",
+      "tailscaleHost": "100.64.0.10",
+      "desktopCommanderId": "YOUR_PRIVATE_MCP_DEVICE_ID"
+    },
+    {
+      "id": "mini-pc1",
+      "os": "windows",
+      "sshUser": "your-ssh-user",
+      "tailscaleHost": "mini-pc1.example-tailnet.ts.net",
+      "desktopCommanderId": "YOUR_PRIVATE_MCP_DEVICE_ID"
+    }
+  ]
+}
