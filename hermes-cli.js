@@ -3199,6 +3199,35 @@ async function showSwarmJobsManagement() {
 // 5. MAIN MENU & DISPATCHER
 // ─────────────────────────────────────────────────────────────────────────────
 
+// MVX device launcher: certified profiles only, fail-closed for missing IAM.
+async function showMvxProjectHub() {
+  clearScreen()
+  const launcher = require('./mvx-project-launcher.cjs')
+  console.log('\n  MVX MULTI-DEVICE PROJECT CONTROL')
+  console.log('  Dev: browser locale 127.0.0.1. Production: Keycloak nativo obbligatorio.\n')
+  for (const entry of launcher.inventory()) {
+    console.log('  ' + entry.id.padEnd(25) + ' dev=' + entry.dev.padEnd(14) +
+      ' prod=' + entry.production.padEnd(17) + ' ' + (entry.localCheckout ? 'LOCAL' : 'non presente'))
+  }
+  console.log('\n  Desktop Commander: dispatch autorizzato tramite il connettore MCP.')
+  console.log('  Tailscale: SSH autenticato e devices.json privato richiesti.\n')
+  const ask = question => new Promise(resolve => {
+    const rl = readline.createInterface({input:process.stdin,output:process.stdout})
+    rl.question(question, answer => {rl.close();resolve(answer.trim())})
+  })
+  const id = await ask('  Project ID (Invio=indietro): ')
+  if (!id) return showMenu()
+  const mode = (await ask('  Modalita [dev|production]: ')).toLowerCase()
+  const transport = (await ask('  Trasporto [local|tailscale|desktop-commander]: ')).toLowerCase() || 'local'
+  const device = transport === 'local' ? '' : await ask('  Device ID (da devices.json): ')
+  const cliArgs = ['launch',id,'--mode',mode,'--transport',transport]
+  if (device) cliArgs.push('--device',device)
+  try { await launcher.cli(cliArgs) }
+  catch (error) { console.error('  Avvio negato: ' + error.message) }
+  await waitForEnter()
+  return showMenu()
+}
+
 async function showMenu() {
   clearScreen()
   printBanner()
@@ -3213,6 +3242,7 @@ async function showMenu() {
   console.log(`  [S]  ${COLORS.magenta}${COLORS.bright}🎬 AI Influencer Studios Dashboard${COLORS.reset}       (Orazio :8765, Giuly :8766, Science :8767, Finance :8768, Aword :8769)`)
   console.log(`  [AW] ${COLORS.blue}${COLORS.bright}🗣️  Aword Language Content Matrix${COLORS.reset}        (Dashboard 260 Video & Caroselli, Survey & All-in-One :8769)`)
   console.log(`  [PS] ${COLORS.magenta}${COLORS.bright}⚡ Multi-Project Studio & Generator${COLORS.reset}     (Master Dashboard & Generatore Automatico Idee :8765/project-studio)`)
+  console.log('  [MVX] Progetti MVX: TAURUS, Light Monitor, deploy e controllo multi-device')
   console.log(`  [U]  ${COLORS.red}${COLORS.bright}🌅 Morning Report, Gaps & Decisioni${COLORS.reset}        (Difformità, incongruenze & decisioni executive)\n`)
 
   console.log(`  ${COLORS.bright}╔══════════════════════════════════════════════════════════════════════════════════════════╗${COLORS.reset}`)
@@ -3282,6 +3312,10 @@ async function handleChoice(choice) {
   console.log('')
   const c = choice.toUpperCase()
   switch (c) {
+    case 'MVX':
+    case 'MVX-PROJECTS':
+      await showMvxProjectHub()
+      break
     case 'I':
     case 'LDG':
     case 'INNOVATION': {
@@ -3927,6 +3961,10 @@ if (args.length > 0) {
   --quality-ecommerce       Run full quality and contracts suite for Moser Commerce
   --studios, -s             Open AI Influencer Studios Dashboard (Orazio/Giuly/etc.)
   --aword, --aword-dashboard, -aw Open Aword Language Content Matrix Dashboard (:8769)
+  --mvx-projects             List MVX projects and local readiness
+  --mvx-devices              List local/remote device configuration
+  --mvx-launch <id> --mode dev|production [--transport ... --device ...]
+  --mvx-status <id>          Process and loopback port status
   --project-studio, -ps     Open Multi-Project Studio & Automated Idea Generator (:8765/project-studio)
   --studios-start           Start and verify all AI Studios ports without opening a browser
   --studios-health          Print machine-readable health for ports 8765-8769
@@ -3949,6 +3987,12 @@ if (args.length > 0) {
   --audit, --traceability   Show traceability data
   --stats                   Show librarian statistics using the configured runtime`)
     process.exit(0)
+  } else if (['--mvx-projects','--mvx-devices','--mvx-launch','--mvx-status','--mvx-plan'].includes(command)) {
+    const action = {'--mvx-projects':'list','--mvx-devices':'devices','--mvx-launch':'launch','--mvx-status':'status','--mvx-plan':'plan'}[command]
+    require('./mvx-project-launcher.cjs').cli([action,...args.slice(1)]).catch(error => {
+      console.error(JSON.stringify({error:error.message}))
+      process.exitCode=1
+    })
   } else if (command === '--doctor' || command === 'doctor' || command === '--self-test') {
     const report = buildTuiosDoctorReport()
     console.log(JSON.stringify(report, null, 2))
