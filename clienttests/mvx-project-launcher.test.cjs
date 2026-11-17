@@ -46,8 +46,8 @@ test('Desktop Commander dispatch is a plan, not a false execution receipt',()=>{
   const old=process.env.MVX_HERMES_HOME;
   try{
     process.env.MVX_HERMES_HOME=base;
-    fs.mkdirSync(path.join(base,'tuios'),{recursive:true});
-    fs.writeFileSync(path.join(base,'tuios','devices.json'),JSON.stringify({devices:[{
+    fs.mkdirSync(path.join(base,'.mvx-tuios-runtime'),{recursive:true});
+    fs.writeFileSync(path.join(base,'.mvx-tuios-runtime','devices.json'),JSON.stringify({devices:[{
       id:'laptop',desktopCommanderId:'test-only-device',sshUser:'tester',
       tailscaleHost:'100.100.100.100',os:'windows'
     }]}));
