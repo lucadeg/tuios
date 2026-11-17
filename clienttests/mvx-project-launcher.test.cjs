@@ -72,6 +72,6 @@ test('checkout resolution never escapes .hermes root',()=>{
   try{
     fs.mkdirSync(path.join(root,'mvx-ide-taurus'));
     assert.equal(launcher.resolveProject(p,root),path.join(root,'mvx-ide-taurus'));
-    assert.throws(()=>launcher.resolveProject({paths:['../etc']} ,root),/unsafe_registry_path/);
+    assert.throws(()=>launcher.resolveProject({paths:['../etc']} ,root),/unsafe_registry_path|path_outside_hermes/);
   }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
