@@ -13,7 +13,7 @@ const INVENTORY=require('./config/mvx-projects.json');
 
 const slug=/^[a-z0-9][a-z0-9-]{1,79}$/;
 const home=()=>path.resolve(process.env.MVX_HERMES_HOME||path.join(os.homedir(),'.hermes'));
-const stateRoot=()=>path.join(home(),'tuios','launches');
+const stateRoot=()=>path.join(home(),'.mvx-tuios-runtime','launches');
 const statePath=id=>path.join(stateRoot(),id+'.json');
 const assertSlug=x=>{if(!slug.test(x||''))throw Error('invalid_project_or_device_id');return x;};
 const inputIds=()=>new Set(INVENTORY.projects.map(x=>x.id));
