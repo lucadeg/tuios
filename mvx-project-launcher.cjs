@@ -39,6 +39,23 @@ const profileFor=(project,mode)=>{
 };
 const ensureIdentity=(profile,env=process.env)=>{
   for(const key of profile.requiredEnv||[])if(typeof env[key]!=='string'||!env[key].trim())throw Error('missing_production_identity_config:'+key);
+  if((profile.requiredEnv||[]).includes('MVX_KEYCLOAK_ISSUER')){
+    let issuer;
+    try{issuer=new URL(env.MVX_KEYCLOAK_ISSUER)}catch{throw Error('invalid_keycloak_issuer_url');}
+    if(issuer.protocol!=='https:'||issuer.username||issuer.password||issuer.search||issuer.hash||
+       ['localhost','127.0.0.1','::1'].includes(issuer.hostname))
+      throw Error('production_keycloak_requires_https_trusted_issuer');
+    if(!/^[A-Za-z0-9][A-Za-z0-9._-]{2,119}$/.test(env.MVX_KEYCLOAK_CLIENT_ID||''))
+      throw Error('invalid_keycloak_client_id');
+  }
+};
+const verifySignedNativeRelease=binary=>{
+  if(process.platform!=='win32')throw Error('windows_native_release_required');
+  // The signed Windows executable must be trusted by the device certificate store.
+  const script="$s=Get-AuthenticodeSignature -LiteralPath '"+binary.replace(/'/g,"''")+"';if($s.Status -ne 'Valid'){exit 7}";
+  const result=spawnSync('powershell.exe',['-NoProfile','-NonInteractive','-EncodedCommand',
+    Buffer.from(script,'utf16le').toString('base64')],{timeout:12000,windowsHide:true,encoding:'utf8'});
+  if(result.error||result.status!==0)throw Error('native_production_signature_not_verified');
 };
 const loadedState=id=>{try{return JSON.parse(fs.readFileSync(statePath(id),'utf8'))}catch{return null}};
 const alive=pid=>{if(!Number.isInteger(pid)||pid<=0)return false;try{process.kill(pid,0);return true}catch{return false}};
@@ -79,7 +96,8 @@ async function launchLocal(id,mode,{waitMs=60000}={}){
   }else{
     if(!/^[A-Za-z0-9_./-]+\.exe$/.test(profile.relative))throw Error('unsafe_native_binary');
     binary=path.resolve(cwd,...profile.relative.split('/'));
-    if(!binary.startsWith(cwd+path.sep)||!fs.existsSync(binary))throw Error('signed_native_binary_not_found');
+    if(!binary.startsWith(cwd+path.sep)||!fs.existsSync(binary))throw Error('native_binary_not_found');
+    verifySignedNativeRelease(binary);
   }
   fs.mkdirSync(stateRoot(),{recursive:true,mode:0o700});
   const logfile=path.join(stateRoot(),id+'-'+mode+'.log');
