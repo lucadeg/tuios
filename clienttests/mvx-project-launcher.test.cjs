@@ -26,6 +26,14 @@ test('production refuses absent OIDC configuration regardless of browser-dev pol
     MVX_KEYCLOAK_ISSUER:'https://idp.example.test/realms/mvx',
     MVX_KEYCLOAK_CLIENT_ID:'mvx-native'
   }));
+  assert.throws(()=>launcher.ensureIdentity(profile,{
+    MVX_KEYCLOAK_ISSUER:'http://127.0.0.1:8080/realms/mvx',
+    MVX_KEYCLOAK_CLIENT_ID:'mvx-native'
+  }),/production_keycloak_requires_https_trusted_issuer/);
+  assert.throws(()=>launcher.ensureIdentity(profile,{
+    MVX_KEYCLOAK_ISSUER:'https://idp.example.test/realms/mvx',
+    MVX_KEYCLOAK_CLIENT_ID:'!'
+  }),/invalid_keycloak_client_id/);
 });
 test('uncertified projects cannot be launched in either auth mode',()=>{
   for(const id of ['mvx-founder-os','mvx-saas-master','mvx-trading-master']){
