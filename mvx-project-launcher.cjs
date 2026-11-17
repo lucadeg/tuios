@@ -118,7 +118,7 @@ async function launchLocal(id,mode,{waitMs=60000}={}){
   return {status:'process_started_iam_not_yet_verified',id,mode,pid:child.pid,logfile};
 }
 const loadDevices=()=>{
-  const file=path.join(home(),'tuios','devices.json');
+  const file=path.join(home(),'.mvx-tuios-runtime','devices.json');
   if(!fs.existsSync(file))return [];
   const value=JSON.parse(fs.readFileSync(file,'utf8'));
   if(!Array.isArray(value.devices))throw Error('invalid_device_configuration');
