@@ -61,7 +61,7 @@ const localStatus=async id=>{
     processAlive:alive(record?.pid),loopbackPort:port||null,loopbackListening:listening,
     url:listening?'http://127.0.0.1:'+port+'/':null,identityVerified:false};
 };
-async function launchLocal(id,mode,{waitMs=18000}={}){
+async function launchLocal(id,mode,{waitMs=60000}={}){
   const project=find(id),profile=profileFor(project,mode),cwd=resolveProject(project);
   if(!cwd)throw Error('project_checkout_missing_on_this_device:'+id);
   const old=loadedState(id);
@@ -96,12 +96,24 @@ async function launchLocal(id,mode,{waitMs=18000}={}){
   if(mode==='dev'){
     const deadline=Date.now()+waitMs;
     while(Date.now()<deadline){
-      if(await portOpen(profile.port))return {status:'listening',id,mode,pid:child.pid,
-        url:'http://127.0.0.1:'+profile.port+'/',logfile,auth:'not_required_in_browser_dev_only'};
+      if(await portOpen(profile.port)){
+        let responsive=false;
+        try{
+          const response=await fetch('http://127.0.0.1:'+profile.port+'/',{
+            method:'HEAD',signal:AbortSignal.timeout(2500)
+          });
+          responsive=response.status>=200&&response.status<400;
+        }catch{/* TCP accept alone does not mean HTTP service is ready. */}
+        if(responsive)return {status:'http_ready',id,mode,pid:child.pid,
+          url:'http://127.0.0.1:'+profile.port+'/',logfile,auth:'not_required_in_browser_dev_only'};
+      }
       if(!alive(child.pid))throw Error('server_exited_before_readiness:'+logfile);
       await delay(650);
     }
-    throw Error('readiness_timeout_investigate_log:'+logfile);
+    // Slow predev compilation may still be running. Do not report a failure
+    // when the owned process is alive; return a distinguishable pending status.
+    if(alive(child.pid))return {status:'starting_not_ready',id,mode,pid:child.pid,logfile,port:profile.port};
+    throw Error('server_exited_before_readiness:'+logfile);
   }
   return {status:'process_started_iam_not_yet_verified',id,mode,pid:child.pid,logfile};
 }
