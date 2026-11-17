@@ -136,7 +136,7 @@ const tailscaleHost=(host)=>{
 function remotePlan(id,mode,deviceId,transport){
   find(id);profileFor(find(id),mode);assertSlug(deviceId);
   const device=loadDevices().find(x=>x.id===deviceId);
-  if(!device)throw Error('unknown_remote_device:configure_.hermes/tuios/devices.json');
+  if(!device)throw Error('unknown_remote_device:configure_.hermes/.mvx-tuios-runtime/devices.json');
   const cmd='node "$env:USERPROFILE\\.hermes\\tuios\\mvx-project-launcher.cjs" launch '+id+' --mode '+mode+' --transport local';
   if(transport==='desktop-commander')
     return {status:'requires_connected_desktop_commander_dispatch',executed:false,
