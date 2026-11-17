@@ -36,7 +36,7 @@ The `tailscale` transport uses SSH over an explicitly configured tailnet IP (`10
 
 The `desktop-commander` transport emits a structured dispatch plan (device ID + safe launcher command). A connected, authorized Desktop Commander MCP client such as ChatGPT can execute that plan using its remote `start_process` operation. **The standalone TUIOS Node process has no MCP credentials and does not pretend a plan is an executed remote launch.** The plan returns exit code 3 to distinguish it from a completed start.
 
-Copy `config/mvx-devices.example.json` to the **private**, non-versioned file `~/.hermes/tuios/devices.json` on the computer initiating the command, and replace the placeholder device ID, SSH username and Tailscale address with verified details. Do not commit credentials, device IDs or SSH private keys.
+Copy `config/mvx-devices.example.json` to the **private**, non-versioned file `~/.hermes/.mvx-tuios-runtime/devices.json` on the computer initiating the command, and replace the placeholder device ID, SSH username and Tailscale address with verified details. Do not commit credentials, device IDs or SSH private keys.
 
 ## Verification
 
