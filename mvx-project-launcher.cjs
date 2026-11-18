@@ -10,6 +10,8 @@ const net=require('node:net');
 const {spawn,spawnSync}=require('node:child_process');
 const {isIP}=require('node:net');
 const INVENTORY=require('./config/mvx-projects.json');
+const telemetry=require('./mvx-project-diagnostics.cjs');
+const diagnosticsFor=id=>telemetry.createProjectLogger(id);
 
 const slug=/^[a-z0-9][a-z0-9-]{1,79}$/;
 const home=()=>path.resolve(process.env.MVX_HERMES_HOME||path.join(os.homedir(),'.hermes'));
@@ -74,12 +76,19 @@ const localStatus=async id=>{
   const project=find(id),record=loadedState(id);
   const port=project.modes.dev?.port;
   const listening=Number.isInteger(port)?await portOpen(port):false;
+  let observed=null;
+  try{observed=telemetry.readEvents(id,1)[0]||null;}catch{/* optional diagnostics unavailable */ }
   return {id,device:os.hostname(),recorded:!!record,mode:record?.mode||null,pid:record?.pid||null,
     processAlive:alive(record?.pid),loopbackPort:port||null,loopbackListening:listening,
-    url:listening?'http://127.0.0.1:'+port+'/':null,identityVerified:false};
+    url:listening?'http://127.0.0.1:'+port+'/':null,identityVerified:false,
+    diagnosticLedger:observed?{lastObservedAt:observed.time,lastEvent:observed.event,
+      lastLevel:observed.level}:null};
 };
 async function launchLocal(id,mode,{waitMs=60000}={}){
-  const project=find(id),profile=profileFor(project,mode),cwd=resolveProject(project);
+  const project=find(id);
+  const record=diagnosticsFor(project.id);
+  record('INFO','project.launcher','launch_requested',{mode,result:'requested'});
+  const profile=profileFor(project,mode),cwd=resolveProject(project);
   if(!cwd)throw Error('project_checkout_missing_on_this_device:'+id);
   const old=loadedState(id);
   if(old&&alive(old.pid))throw Error('already_running_managed_process:'+id+':'+old.pid);
@@ -109,30 +118,63 @@ async function launchLocal(id,mode,{waitMs=60000}={}){
   });
   fs.closeSync(fd);
   if(!child.pid)throw Error('process_spawn_failed');
+  child.on('error',()=>record('ERROR','project.launcher','child_spawn_error',{
+    errorCode:'PROCESS_SPAWN_ERROR',result:'failed'
+  }));
   child.unref();
   writeState(id,{id,mode,pid:child.pid,device:os.hostname(),cwd,logfile,startedAt:new Date().toISOString(),port:profile.port||null});
+  record('INFO','project.launcher','managed_process_started',{
+    pid:child.pid,mode,port:profile.port||0,result:'started'
+  });
+  // Detached observer, read-only, separate from the application runtime.
+  try{
+    const watchEnv={};
+    for(const key of ['PATH','Path','SystemRoot','ComSpec','HOME','USERPROFILE','MVX_HERMES_HOME']){
+      if(process.env[key])watchEnv[key]=process.env[key];
+    }
+    const watcher=spawn(process.execPath,[
+      path.join(__dirname,'mvx-project-observer.cjs'),id,mode,
+      String(child.pid),String(profile.port||0)
+    ],{cwd:__dirname,env:watchEnv,stdio:'ignore',detached:true,windowsHide:true});
+    if(watcher.pid){
+      watcher.unref();
+      record('INFO','project.launcher','observer_spawned',{observerPid:watcher.pid,result:'started'});
+    }else record('WARN','project.launcher','observer_not_started',{errorCode:'OBSERVER_NOT_STARTED'});
+  }catch{
+    record('WARN','project.launcher','observer_not_started',{errorCode:'OBSERVER_SPAWN_FAILED'});
+  }
   if(mode==='dev'){
     const deadline=Date.now()+waitMs;
     while(Date.now()<deadline){
       if(await portOpen(profile.port)){
-        let responsive=false;
+        let responsive=false,observedStatus=0;
         try{
           const response=await fetch('http://127.0.0.1:'+profile.port+'/',{
             method:'HEAD',signal:AbortSignal.timeout(2500)
           });
+          observedStatus=response.status;
           responsive=response.status>=200&&response.status<400;
         }catch{/* TCP accept alone does not mean HTTP service is ready. */}
-        if(responsive)return {status:'http_ready',id,mode,pid:child.pid,
-          url:'http://127.0.0.1:'+profile.port+'/',logfile,auth:'not_required_in_browser_dev_only'};
+        if(responsive){
+          record('INFO','project.launcher','http_readiness_verified',{
+            port:profile.port,httpStatus:observedStatus,result:'http_ready'
+          });
+          return {status:'http_ready',id,mode,pid:child.pid,
+            url:'http://127.0.0.1:'+profile.port+'/',logfile,auth:'not_required_in_browser_dev_only'};
+        }
       }
       if(!alive(child.pid))throw Error('server_exited_before_readiness:'+logfile);
       await delay(650);
     }
     // Slow predev compilation may still be running. Do not report a failure
     // when the owned process is alive; return a distinguishable pending status.
-    if(alive(child.pid))return {status:'starting_not_ready',id,mode,pid:child.pid,logfile,port:profile.port};
+    if(alive(child.pid)){
+      record('WARN','project.launcher','readiness_timeout',{port:profile.port,result:'pending'});
+      return {status:'starting_not_ready',id,mode,pid:child.pid,logfile,port:profile.port};
+    }
     throw Error('server_exited_before_readiness:'+logfile);
   }
+  record('WARN','project.launcher','iam_not_yet_verified',{mode,result:'pending'});
   return {status:'process_started_iam_not_yet_verified',id,mode,pid:child.pid,logfile};
 }
 const loadDevices=()=>{
@@ -187,6 +229,32 @@ function inventory(){
   }catch{}
   return entries;
 }
+
+function outputEvents(id,{tail=100,level='',component='',follow=false}={}){
+  find(id); // inventory authority, not a filesystem-supplied path
+  const n=Number(tail);
+  if(!Number.isInteger(n)||n<1||n>2000)throw Error('invalid_log_tail');
+  let seen=new Set();
+  const snapshot=()=>{
+    const events=telemetry.readEvents(id,n);
+    for(const event of events){
+      const key=JSON.stringify(event);
+      if(seen.has(key))continue;
+      seen.add(key);
+      if(seen.size>4000)seen=new Set([key]);
+      if(level&&event.level!==level.toUpperCase())continue;
+      if(component&&event.component!==component)continue;
+      console.log(JSON.stringify(event));
+    }
+    return events.length;
+  };
+  snapshot();
+  if(follow){
+    const watcher=setInterval(snapshot,1500);
+    process.once('SIGINT',()=>clearInterval(watcher));
+    process.once('SIGTERM',()=>clearInterval(watcher));
+  }
+}
 async function cli(args=process.argv.slice(2)){
   const action=args[0]||'list';
   const option=key=>{const i=args.indexOf(key);return i<0?null:args[i+1]||null;};
@@ -196,6 +264,12 @@ async function cli(args=process.argv.slice(2)){
     id:x.id,transports:['desktop-commander','tailscale'],hasCommanderId:!!x.desktopCommanderId,
     hasTailscaleHost:!!x.tailscaleHost}))};
   else if(action==='status')result=await localStatus(args[1]);
+  else if(action==='logs'){
+    const id=args[1],n=Number(option('--tail')||100);
+    outputEvents(id,{tail:n,level:option('--level')||'',
+      component:option('--component')||'',follow:args.includes('--follow')});
+    return {id,logSource:'structured_diagnostics'};
+  }
   else if(action==='launch'||action==='plan'){
     const id=args[1],mode=option('--mode'),transport=option('--transport')||'local',device=option('--device');
     if(!id||!mode)throw Error('usage: launch <id> --mode dev|production [--transport local|tailscale|desktop-commander --device id]');
@@ -216,5 +290,18 @@ async function cli(args=process.argv.slice(2)){
   if(result?.status==='requires_connected_desktop_commander_dispatch')process.exitCode=3;
   return result;
 }
-if(require.main===module)cli().catch(e=>{console.error(JSON.stringify({error:e.message}));process.exitCode=1});
-module.exports={inventory,find,resolveProject,profileFor,ensureIdentity,remotePlan,tailscaleHost,launchLocal,localStatus,cli};
+if(require.main===module)cli().catch(e=>{
+  const [action,id]=process.argv.slice(2);
+  if(action==='launch'&&INVENTORY.projects.some(p=>p.id===id)){
+    diagnosticsFor(id)('ERROR','project.launcher','launch_failed',{
+      errorCode: /not_certified/.test(e.message)?'PROFILE_NOT_CERTIFIED':
+        /already_running/.test(e.message)?'ALREADY_RUNNING':
+        /existing_unmanaged_listener/.test(e.message)?'PORT_BUSY':'LAUNCH_FAILED',
+      result:'failed'
+    });
+  }
+  console.error(JSON.stringify({error:'MVX_PROJECT_COMMAND_FAILED',reason:
+    /not_certified/.test(e.message)?'PROFILE_NOT_CERTIFIED':'CHECK_DIAGNOSTIC_LEDGER'}));
+  process.exitCode=1;
+});
+module.exports={inventory,find,resolveProject,profileFor,ensureIdentity,remotePlan,tailscaleHost,launchLocal,localStatus,cli,outputEvents};
