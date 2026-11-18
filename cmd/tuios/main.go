@@ -151,6 +151,8 @@ comprehensive keyboard/mouse interactions.`,
 		SilenceUsage: true,
 	}
 
+	rootCmd.AddCommand(newMVXDiagnosticsCommand())
+
 	rootCmd.PersistentFlags().BoolVar(&debugMode, "debug", false, "Enable debug logging")
 	rootCmd.PersistentFlags().StringVar(&cpuProfile, "cpuprofile", "", "Write CPU profile to file")
 	rootCmd.PersistentFlags().StringVar(&pprofAddr, "pprof", "", "Serve net/http/pprof on this address for live profiling (e.g. localhost:6060)")
