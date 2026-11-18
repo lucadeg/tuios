@@ -97,8 +97,7 @@ func renderFOSEvent(line, level, component string, raw bool, out io.Writer) {
   if e.ErrorCode != "" { detail += " code=" + e.ErrorCode }
   if e.HTTPStatus > 0 { detail += fmt.Sprintf(" http=%d", e.HTTPStatus) }
   if e.FreeMemoryMB > 0 { detail += fmt.Sprintf(" freeRAM=%.0fMB", e.FreeMemoryMB) }
-  fmt.Fprintf(out, "%s %-8s %-20s %-26s %s
-", e.Time, e.Level, e.Component, e.Event, strings.TrimSpace(detail))
+  fmt.Fprintf(out, "%s %-8s %-20s %-26s %s\n", e.Time, e.Level, e.Component, e.Event, strings.TrimSpace(detail))
 }
 func tailFOS(file string, n int) ([]string, error) {
   f, err := os.Open(file)
@@ -154,8 +153,7 @@ func showLocalFOS(ctx context.Context, dir string, n int, follow bool,
       f.Close()
       if readErr != nil { continue }
       offset += int64(len(block))
-      parts := strings.Split(remaining + string(block), "
-")
+      parts := strings.Split(remaining + string(block), "\n")
       remaining = parts[len(parts)-1]
       if len(remaining) > 8192 { remaining = ""; fmt.Fprintln(out, "[FOS_LOG_LINE_TOO_LONG]") }
       for _, line := range parts[:len(parts)-1] {
@@ -167,7 +165,7 @@ func showLocalFOS(ctx context.Context, dir string, n int, follow bool,
 var allowedSSHHost = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*(?:@[a-zA-Z0-9][a-zA-Z0-9._-]*)?$`)
 func remoteCommand(host string, n int, follow bool) (*exec.Cmd, error) {
   if len(host) > 180 || !allowedSSHHost.MatchString(host) { return nil, errors.New("invalid SSH host") }
-  script := "$f=Join-Path $env:USERPROFILE '.hermes\diagnostics\founder-os\events.jsonl';" +
+  script := "$f=Join-Path $env:USERPROFILE '.hermes\\diagnostics\\founder-os\\events.jsonl';" +
     "if(!(Test-Path -LiteralPath $f)){[Console]::Error.WriteLine('FOS_DIAGNOSTICS_LOG_MISSING');exit 2};" +
     "Get-Content -LiteralPath $f -Encoding UTF8 -Tail " + strconv.Itoa(n)
   if follow { script += " -Wait" }
@@ -184,13 +182,9 @@ func remoteFOSLines(ctx context.Context, host string, n int) ([]string, error) {
   cmd = exec.CommandContext(ctx, cmd.Path, cmd.Args[1:]...)
   output, err := cmd.Output()
   if err != nil { return nil, fmt.Errorf("SSH diagnostics read failed: %w", err) }
-  text := strings.TrimSuffix(strings.ReplaceAll(string(output), "
-", "
-"), "
-")
+  text := strings.TrimSuffix(strings.ReplaceAll(string(output), "\r\n", "\n"), "\n")
   if text == "" { return nil, nil }
-  return strings.Split(text, "
-"), nil
+  return strings.Split(text, "\n"), nil
 }
 func streamRemoteFOS(ctx context.Context, host string, n int, follow bool,
   level, component string, raw bool, out io.Writer) error {
@@ -230,12 +224,7 @@ func printFOSStatus(lines []string, out io.Writer) error {
       lastError = e.Time + " " + e.Component + "/" + e.Event + " " + e.ErrorCode
     }
   }
-  fmt.Fprintf(out, "FOS diagnostic ledger (not an authenticated live API check)
-Last event: %s
-Last readiness: %s
-Errors in last %d events: %d
-Last error: %s
-",
+  fmt.Fprintf(out, "FOS diagnostic ledger (not an authenticated live API check)\nLast event: %s\nLast readiness: %s\nErrors in last %d events: %d\nLast error: %s\n",
     lastTime, readiness, len(lines), errorsCount, lastError)
   return nil
 }
