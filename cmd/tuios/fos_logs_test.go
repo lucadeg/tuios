@@ -38,7 +38,7 @@ func TestFOSSSHRejectsInjection(t *testing.T) {
 func TestFOSStatusDoesNotClaimLiveHealth(t *testing.T) {
   var output bytes.Buffer
   if err := printFOSStatus([]string{sampleFOSEvent}, &output); err != nil { t.Fatal(err) }
-  if !strings.Contains(output.String(), "NO_EVIDENCE") || !strings.Contains(output.String(), "decrypt_failed") {
+  if !strings.Contains(output.String(), "not_ready") || !strings.Contains(output.String(), "decrypt_failed") {
     t.Fatal(output.String())
   }
 }
