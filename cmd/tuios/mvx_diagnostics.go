@@ -142,8 +142,7 @@ func mvxRender(events []map[string]any,level,component string,jsonMode bool,outp
   if level!=""&&event["level"]!=strings.ToUpper(level){continue}
   if component!=""&&event["component"]!=component{continue}
   if jsonMode{b,_:=json.Marshal(event);fmt.Fprintln(output,string(b));continue}
-  fmt.Fprintf(output,"%s %-8v %-23v %-24v code=%v result=%v
-",
+  fmt.Fprintf(output,"%s %-8v %-23v %-24v code=%v result=%v\n",
    event["time"],event["level"],event["component"],event["event"],
    event["errorCode"],event["result"])
  }
@@ -170,16 +169,12 @@ func mvxStatus(events []map[string]any,output io.Writer){
    lastError=fmt.Sprint(e["time"]," ",e["component"],"/",e["event"]," ",e["errorCode"])
   }
  }
- fmt.Fprintf(output,"MVX recorded diagnostics (not live authenticated readiness)
-Last: %s
-State: %s
-Last error: %s
-",lastTime,state,lastError)
+ fmt.Fprintf(output,"MVX recorded diagnostics (not live authenticated readiness)\nLast: %s\nState: %s\nLast error: %s\n",lastTime,state,lastError)
 }
 func mvxRemoteCommand(host,id string,n int,follow bool)(*exec.Cmd,error){
  if len(host)>180||!mvxSSHHost.MatchString(host){return nil,errors.New("invalid SSH target")}
  if err:=validateMVXID(id);err!=nil{return nil,err}
- script:="$f=Join-Path $env:USERPROFILE '.hermes\.mvx-tuios-runtime\diagnostics\"+id+"\events.jsonl';"+
+ script:=`$f=Join-Path $env:USERPROFILE '.hermes\.mvx-tuios-runtime\diagnostics\`+id+`\events.jsonl';`+
  "if(!(Test-Path -LiteralPath $f)){[Console]::Error.WriteLine('MVX_DIAGNOSTICS_LOG_MISSING');exit 2};"+
  "Get-Content -LiteralPath $f -Encoding UTF8 -Tail "+strconv.Itoa(n)
  if follow{script+=" -Wait"}
