@@ -82,7 +82,13 @@ const localStatus=async id=>{
     processAlive:alive(record?.pid),loopbackPort:port||null,loopbackListening:listening,
     url:listening?'http://127.0.0.1:'+port+'/':null,identityVerified:false,
     diagnosticLedger:observed?{lastObservedAt:observed.time,lastEvent:observed.event,
-      lastLevel:observed.level}:null};
+      lastLevel:observed.level}:null,
+    devProfile:project.modes.dev?.kind||'missing',
+    devBlockedReason:project.modes.dev?.kind==='unconfigured'?
+      project.modes.dev.reason:'none',
+    productionProfile:project.modes.production?.kind||'missing',
+    productionBlockedReason:project.modes.production?.kind==='unconfigured'?
+      project.modes.production.reason:'none'};
 };
 async function launchLocal(id,mode,{waitMs=60000}={}){
   const project=find(id);
