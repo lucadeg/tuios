@@ -5,7 +5,6 @@ package main
 // credentials beyond the operator's existing filesystem/SSH permissions.
 import (
  "bufio"
- "bytes"
  "context"
  "encoding/base64"
  "encoding/binary"
@@ -259,4 +258,3 @@ func newMVXDiagnosticsCommand()*cobra.Command {
  root.AddCommand(status)
  return root
 }
-var _=bytes.MinRead
