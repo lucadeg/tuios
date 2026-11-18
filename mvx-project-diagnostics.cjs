@@ -139,12 +139,20 @@ function readEvents(projectId, limit = 100) {
         if (value.schema !== EVENT_SCHEMA && value.schema !== 'mvx.fos.diagnostic.v1') continue;
         if (value.schema === EVENT_SCHEMA && value.projectId !== projectId) continue;
         // Schema allows only safe, known fields. Never echo unknown keys.
-        const entry = { time: value.time, level: value.level, projectId,
-          component:value.component, event:value.event, runId:value.runId,
-          result:value.result, errorCode:value.errorCode, errorName:value.errorName,
-          mode:value.mode, pid:value.pid, httpStatus:value.httpStatus,
-          port:value.port, durationMs:value.durationMs, lineHash:value.lineHash };
-        if (typeof entry.time !== 'string' || !/^\d{4}-\d{2}-\d{2}T/.test(entry.time)) continue;
+        const safeString = input => typeof input === 'string' && SAFE_VALUE.test(input) ?
+          input : undefined;
+        const entry = { schema:value.schema, time:value.time, level:safeString(value.level),
+          projectId, component:safeString(value.component), event:safeString(value.event),
+          runId:safeString(value.runId), result:safeString(value.result),
+          errorCode:safeString(value.errorCode), errorName:safeString(value.errorName),
+          mode:safeString(value.mode), lineHash:safeString(value.lineHash) };
+        for (const key of ['pid','httpStatus','port','durationMs']) {
+          if (typeof value[key] === 'number' && Number.isFinite(value[key]) &&
+              value[key] >= -1 && value[key] < 1e12) entry[key]=value[key];
+        }
+        if (typeof entry.time !== 'string' || entry.time.length > 40 ||
+            !/^\d{4}-\d{2}-\d{2}T/.test(entry.time) ||
+            Number.isNaN(Date.parse(entry.time)) || !entry.event) continue;
         events.push(entry);
       } catch { /* Invalid records are never printed as plaintext. */ }
     }
