@@ -3965,6 +3965,7 @@ if (args.length > 0) {
   --mvx-devices              List local/remote device configuration
   --mvx-launch <id> --mode dev|production [--transport ... --device ...]
   --mvx-status <id>          Process and loopback port status
+  --mvx-logs <id> [--level ERROR] [--follow]  Structured per-project diagnostics
   --project-studio, -ps     Open Multi-Project Studio & Automated Idea Generator (:8765/project-studio)
   --studios-start           Start and verify all AI Studios ports without opening a browser
   --studios-health          Print machine-readable health for ports 8765-8769
@@ -3987,8 +3988,8 @@ if (args.length > 0) {
   --audit, --traceability   Show traceability data
   --stats                   Show librarian statistics using the configured runtime`)
     process.exit(0)
-  } else if (['--mvx-projects','--mvx-devices','--mvx-launch','--mvx-status','--mvx-plan'].includes(command)) {
-    const action = {'--mvx-projects':'list','--mvx-devices':'devices','--mvx-launch':'launch','--mvx-status':'status','--mvx-plan':'plan'}[command]
+  } else if (['--mvx-projects','--mvx-devices','--mvx-launch','--mvx-status','--mvx-plan','--mvx-logs'].includes(command)) {
+    const action = {'--mvx-projects':'list','--mvx-devices':'devices','--mvx-launch':'launch','--mvx-status':'status','--mvx-plan':'plan','--mvx-logs':'logs'}[command]
     require('./mvx-project-launcher.cjs').cli([action,...args.slice(1)]).catch(error => {
       console.error(JSON.stringify({error:error.message}))
       process.exitCode=1
