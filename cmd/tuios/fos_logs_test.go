@@ -14,8 +14,7 @@ const sampleFOSEvent = `{"schema":"mvx.fos.diagnostic.v1","time":"2026-11-18T13:
 func TestFOSTailAndFilters(t *testing.T) {
   dir := t.TempDir()
   file := filepath.Join(dir, fosFileName)
-  if err := os.WriteFile(file, []byte(sampleFOSEvent+"
-"), 0600); err != nil { t.Fatal(err) }
+  if err := os.WriteFile(file, []byte(sampleFOSEvent+"\n"), 0600); err != nil { t.Fatal(err) }
   lines, err := tailFOS(file, 20)
   if err != nil || len(lines) != 1 { t.Fatalf("tail=%v error=%v", lines, err) }
   var output bytes.Buffer
