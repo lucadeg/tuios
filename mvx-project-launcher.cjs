@@ -248,7 +248,10 @@ function outputEvents(id,{tail=100,level='',component='',follow=false}={}){
     }
     return events.length;
   };
-  snapshot();
+  if(snapshot()===0 && !follow){
+    console.log(JSON.stringify({projectId:id,status:'NO_EVIDENCE',
+      runtimeVerified:false,authenticationVerified:false}));
+  }
   if(follow){
     const watcher=setInterval(snapshot,1500);
     process.once('SIGINT',()=>clearInterval(watcher));
