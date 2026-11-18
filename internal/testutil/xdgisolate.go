@@ -61,6 +61,11 @@ func isolateXDG() (dir string, check func() error) {
 		}
 	}
 	xdg.Reload()
+	// Windows Known Folder resolution can ignore HOME and USERPROFILE even
+	// after Reload; the package-global Home must stay inside the test tree.
+	if runtime.GOOS == "windows" {
+		xdg.Home = tmp
+	}
 
 	return tmp, func() error {
 		defer func() { _ = os.RemoveAll(tmp) }()
