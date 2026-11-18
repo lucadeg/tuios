@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -50,6 +51,14 @@ func isolateXDG() (dir string, check func() error) {
 	// way.
 	if err := os.Setenv("HOME", tmp); err != nil {
 		panic(fmt.Sprintf("testutil: set HOME: %v", err))
+	}
+	// Go os.UserHomeDir on Windows uses USERPROFILE, not HOME. Without
+	// redirecting both, xdg.Home leaks back into the developer account and
+	// the suite correctly fails its isolation invariant.
+	if runtime.GOOS == "windows" {
+		if err := os.Setenv("USERPROFILE", tmp); err != nil {
+			panic(fmt.Sprintf("testutil: set USERPROFILE: %v", err))
+		}
 	}
 	xdg.Reload()
 
