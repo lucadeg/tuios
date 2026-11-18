@@ -217,6 +217,14 @@ func printFOSStatus(lines []string, out io.Writer) error {
     if !ok { continue }
     lastTime = e.Time
     if e.Event == "readiness_evaluation" { readiness = e.Result }
+    if e.Event == "startup_begin" { readiness = "starting" }
+    if e.Event == "decrypt_failed" || e.Event == "startup_aborted" ||
+      e.Event == "child_exited" || e.Event == "spawn_error" {
+      readiness = "not_ready"
+    }
+    if e.Event == "http_probe" && e.Result != "healthy" && e.Result != "auth_required" {
+      readiness = "not_ready"
+    }
     if e.Level == "ERROR" || e.Level == "CRITICAL" {
       errorsCount++
       lastError = e.Time + " " + e.Component + "/" + e.Event + " " + e.ErrorCode
